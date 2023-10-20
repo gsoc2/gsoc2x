@@ -1,0 +1,122 @@
+version: '3'
+services:
+  frontend:
+    image: ghcr.io/gsoc2/gsoc2-frontend:latest
+    container_name: gsoc2-frontend
+    hostname: gsoc2-frontend
+    ports:
+      - "${FRONTEND_PORT}:80"
+      - "${FRONTEND_PORT_HTTPS}:443"
+    networks:
+      - gsoc2
+    environment:
+      - BACKEND_HOSTNAME=${BACKEND_HOSTNAME}
+    restart: unless-stopped
+    depends_on:
+      - backend
+  backend:
+    image: ghcr.io/gsoc2/gsoc2-backend:latest
+    container_name: gsoc2-backend
+    hostname: ${BACKEND_HOSTNAME}
+    # Here for debugging:
+    ports:
+      - "${BACKEND_PORT}:5001"
+    networks:
+      - gsoc2
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${GSOC2_APP_HOTLOAD_LOCATION}:/gsoc2-apps:z
+      - ${GSOC2_FILE_LOCATION}:/gsoc2-files:z
+    env_file: .env
+    environment:
+      #- DOCKER_HOST=tcp://docker-socket-proxy:2375
+      - GSOC2_APP_HOTLOAD_FOLDER=/gsoc2-apps
+      - GSOC2_FILE_LOCATION=/gsoc2-files
+    restart: unless-stopped
+  orborus:
+    image: ghcr.io/gsoc2/gsoc2-orborus:latest
+    container_name: gsoc2-orborus
+    hostname: gsoc2-orborus
+    networks:
+      - gsoc2
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      #- DOCKER_HOST=tcp://docker-socket-proxy:2375
+      - ENVIRONMENT_NAME=${ENVIRONMENT_NAME}
+      - BASE_URL=http://${OUTER_HOSTNAME}:5001
+      - DOCKER_API_VERSION=1.40
+      - GSOC2_BASE_IMAGE_NAME=${GSOC2_BASE_IMAGE_NAME}
+      - GSOC2_BASE_IMAGE_REGISTRY=${GSOC2_BASE_IMAGE_REGISTRY}
+      - GSOC2_BASE_IMAGE_TAG_SUFFIX=${GSOC2_BASE_IMAGE_TAG_SUFFIX}
+      - HTTP_PROXY=${HTTP_PROXY}
+      - HTTPS_PROXY=${HTTPS_PROXY}
+      - GSOC2_PASS_WORKER_PROXY=${GSOC2_PASS_WORKER_PROXY}
+      - GSOC2_PASS_APP_PROXY=${GSOC2_PASS_APP_PROXY}
+    restart: unless-stopped
+    security_opt:
+      - seccomp:unconfined
+  opensearch:
+    image: opensearchproject/opensearch:2.5.0
+    hostname: gsoc2-opensearch
+    container_name: gsoc2-opensearch
+    environment:
+      - bootstrap.memory_lock=true
+      - "OPENSEARCH_JAVA_OPTS=-Xms2048m -Xmx2048m" # minimum and maximum Java heap size, recommend setting both to 50% of system RAM
+      - cluster.initial_master_nodes=gsoc2-opensearch
+      - cluster.routing.allocation.disk.threshold_enabled=false
+      - cluster.name=gsoc2-cluster
+      - node.name=gsoc2-opensearch
+      - node.store.allow_mmap=false
+      - discovery.seed_hosts=gsoc2-opensearch
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536 
+        hard: 65536
+    volumes:
+      - ${DB_LOCATION}:/usr/share/opensearch/data:z
+    ports:
+      - 9200:9200
+    networks:
+      - gsoc2
+    restart: unless-stopped
+  #docker-socket-proxy:
+  #  image: tecnativa/docker-socket-proxy
+  #  container_name: gsoc2-frontend
+  #  hostname: docker-socket-proxy
+  #  privileged: true
+  #  environment:
+  #    - SERVICES=1
+  #    - TASKS=1
+  #    - NETWORKS=1
+  #    - NODES=1
+  #    - BUILD=1
+  #    - IMAGES=1
+  #    - GRPC=1
+  #    - CONTAINERS=1
+  #    - PLUGINS=1
+  #    - SYSTEM=1
+  #    - VOLUMES=1
+  #    - INFO=1
+  #    - DISTRIBUTION=1
+  #    - POST=1
+  #    - AUTH=1
+  #    - SECRETS=1
+  #    - SWARM=1
+  #  volumes:
+  #    - /var/run/docker.sock:/var/run/docker.sock
+  #  networks:
+  #    - gsoc2
+networks:
+  gsoc2:
+    driver: bridge
+
+    # uncomment to set MTU for swarm mode.
+    # MTU should be whatever is your host's preferred MTU is.
+    # Refer to this doc to figure out what your host's MTU is:
+    # https://gsoc2r.io/docs/troubleshooting#TLS_timeout_error/Timeout_Errors/EOF_Errors 
+    # driver_opts:
+    #   com.docker.network.driver.mtu: 1460
