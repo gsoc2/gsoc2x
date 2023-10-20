@@ -1,0 +1,34 @@
+version: '3'
+services:
+  opensearch-node1:
+    image: opensearchproject/opensearch:latest
+    hostname: gsoc2-database
+    container_name: gsoc2-opensearch
+    environment:
+      - cluster.name=gsoc2-cluster
+      - node.name=gsoc2-opensearch
+      - discovery.seed_hosts=gsoc2-opensearch
+      - cluster.initial_master_nodes=gsoc2-opensearch
+      - bootstrap.memory_lock=true # along with the memlock settings below, disables swapping
+      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m" # minimum and maximum Java heap size, recommend setting both to 50% of system RAM
+      - cluster.routing.allocation.disk.threshold_enabled=false
+      - opendistro_security.disabled=true
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536 # maximum number of open files for the OpenSearch user, set to at least 65536 on modern systems
+        hard: 65536
+    volumes:
+      - ~/git/gsoc2/gsoc2-database:/usr/share/opensearch/data
+    ports:
+      - 9200:9200
+    networks:
+      - opensearch-net
+
+volumes:
+  opensearch-data1:
+
+networks:
+  opensearch-net:

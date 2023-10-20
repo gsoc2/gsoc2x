@@ -1,0 +1,253 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.name }}frontend
+  namespace: {{ .Values.namespace | quote }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      service: gsoc2
+      app: gsoc2-frontend
+  template:
+    metadata:
+      labels:
+        service: gsoc2
+        app: gsoc2-frontend
+    spec:
+      containers:
+        - name: gsoc2-frontend
+          image: ghcr.io/gsoc2/gsoc2-frontend:nightly
+          imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
+          env:
+            - name: BACKEND_HOSTNAME
+              value: backend-service
+            - name: TZ
+              value: Asia/Shanghai
+          ports:
+            - name: http
+              containerPort: 80
+              hostPort: 3001
+            - name: https
+              containerPort: 443
+      hostname: gsoc2-frontend
+      restartPolicy: Always
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.name }}backend
+  namespace: {{ .Values.namespace | quote }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      service: gsoc2
+      app: gsoc2-backend
+  template:
+    metadata:
+      labels:
+        service: gsoc2
+        app: gsoc2-backend
+    spec:
+      containers:
+        - name: gsoc2-backend
+          image: ghcr.io/gsoc2/gsoc2-backend:nightly
+          env:
+            - name: BACKEND_HOSTNAME
+              value: "backend-service"
+            - name: BACKEND_PORT
+              value: "5001"
+            - name: ENVIRONMENT_NAME
+              value: "Gsoc2"
+            - name: HTTPS_PROXY
+            - name: HTTP_PROXY
+            - name: ORG_ID
+              value: "Gsoc2"
+            - name: OUTER_HOSTNAME
+              value: "backend-service"
+            - name: GSOC2_APP_FORCE_UPDATE
+              value: "false"
+            - name: GSOC2_APP_HOTLOAD_FOLDER
+              value: "/gsoc2-apps"
+            - name: GSOC2_APP_HOTLOAD_LOCATION
+              value: "/gsoc2-apps"
+            - name: GSOC2_CONTAINER_AUTO_CLEANUP
+              value: "false"
+            - name: GSOC2_DEFAULT_APIKEY
+            - name: GSOC2_DEFAULT_PASSWORD
+            - name: GSOC2_DEFAULT_USERNAME
+            - name: GSOC2_DOWNLOAD_AUTH_BRANCH
+            - name: GSOC2_DOWNLOAD_AUTH_PASSWORD
+            - name: GSOC2_DOWNLOAD_AUTH_USERNAME
+            - name: GSOC2_DOWNLOAD_WORKFLOW_BRANCH
+            - name: GSOC2_DOWNLOAD_WORKFLOW_LOCATION
+            - name: GSOC2_DOWNLOAD_WORKFLOW_PASSWORD
+            - name: GSOC2_DOWNLOAD_WORKFLOW_USERNAME
+            - name: GSOC2_ELASTIC
+              value: "true"
+            - name: GSOC2_OPENSEARCH_APIKEY
+            - name: GSOC2_OPENSEARCH_CERTIFICATE_FILE
+            - name: GSOC2_OPENSEARCH_CLOUDID
+            - name: GSOC2_OPENSEARCH_PASSWORD
+            - name: GSOC2_OPENSEARCH_PROXY
+            - name: GSOC2_OPENSEARCH_SKIPSSL_VERIFY
+              value: "true"
+            - name: GSOC2_OPENSEARCH_URL
+              value: http://opensearch-service:9200
+            - name: GSOC2_OPENSEARCH_USERNAME
+              value: ""
+            - name: GSOC2_PASS_APP_PROXY
+              value: "FALSE"
+            - name: GSOC2_PASS_WORKER_PROXY
+              value: "FALSE"
+          volumeMounts:
+            - mountPath: /var/run/docker.sock
+              name: docker-sock
+            - mountPath: /gsoc2-apps
+              name: gsoc2-app-hotload-location
+            - mountPath: /gsoc2-files
+              name: gsoc2-file-location
+      hostname: gsoc2-backend
+      volumes:
+        - name: docker-sock
+          hostPath:
+            path: /var/run/docker.sock
+        - name: gsoc2-app-hotload-location
+          hostPath:
+            path: /data/kubernetes/gsoc2-apps
+            type: DirectoryOrCreate
+        - name: gsoc2-file-location
+          hostPath:
+            path: /data/kubernetes/gsoc2-files
+            type: DirectoryOrCreate
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.name }}orborus
+  namespace: {{ .Values.namespace | quote }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      service: gsoc2
+      app: gsoc2-orborus
+  template:
+    metadata:
+      labels:
+        service: gsoc2
+        app: gsoc2-orborus
+    spec:
+      containers:
+        - name: gsoc2-orborus
+          image: ghcr.io/gsoc2/gsoc2-orborus:nightly
+          env:
+            - name: RUNNING_MODE
+              value: kubernetes
+            - name: BASE_URL
+              value: http://backend-service:5001
+            - name: CLEANUP
+              value: "false"
+            - name: DOCKER_API_VERSION
+              value: "1.40"
+            - name: ENVIRONMENT_NAME
+              value: Gsoc2
+            - name: HTTPS_PROXY
+            - name: HTTP_PROXY
+            - name: ORG_ID
+              value: Gsoc2
+            - name: GSOC2_APP_SDK_VERSION
+              value: 0.8.97
+            - name: GSOC2_BASE_IMAGE_NAME
+              value: gsoc2
+            - name: GSOC2_BASE_IMAGE_REGISTRY
+              value: ghcr.io
+            - name: GSOC2_BASE_IMAGE_TAG_SUFFIX
+              value: "-0.8.80"
+            - name: GSOC2_ORBORUS_EXECUTION_TIMEOUT
+              value: "600"
+            - name: GSOC2_ORBORUS_EXECUTION_CONCURRENCY
+              value: "50"
+            - name: GSOC2_PASS_WORKER_PROXY
+              value: "TRUE"
+            - name: GSOC2_WORKER_VERSION
+              value: nightly
+            - name: TZ
+              value: Asia/Shanghai
+          volumeMounts:
+            - mountPath: /var/run/docker.sock
+              name: docker-sock
+      hostname: gsoc2-orborus
+      volumes:
+        - name: docker-sock
+          hostPath:
+            path: /var/run/docker.sock
+#---
+#apiVersion: apps/v1
+#kind: Deployment
+#metadata:
+#  name: {{ .Values.name }}opensearch
+#  namespace: {{ .Values.namespace | quote }}
+#spec:
+#  replicas: 1
+#  selector:
+#    matchLabels:
+#      service: gsoc2
+#      app: gsoc2-opensearch
+#  template:
+#    metadata:
+#      labels:
+#        service: gsoc2
+#        app: gsoc2-opensearch
+#    spec:
+#      nodeSelector:
+#        node.bdlab-venus.com/opensearch: available
+#      initContainers:
+#        - name: permissions-fix
+#          image: gsoc2/busybox
+#          #volumeMounts:
+#          #  - name: opensearch-claim0
+#          #    mountPath: /usr/share/elasticsearch/data
+#          command: [ 'chown' ]
+#          args: [ '1000:1000', '/usr/share/elasticsearch/data' ]
+#      containers:
+#        - name: gsoc2-opensearch
+#          image: opensearchproject/opensearch:1.0.1
+#          env:
+#            - name: TZ
+#              value: Asia/Shanghai
+#            - name: bootstrap.memory_lock
+#              value: "false"
+#            - name: OPENSEARCH_JAVA_OPTS
+#              value: "-Xms1024m -Xmx1024m"
+#            - name: opendistro_security.disabled
+#              value: "true"
+#            - name: cluster.routing.allocation.disk.threshold_enabled
+#              value: "false"
+#            - name: cluster.name
+#              value: gsoc2-cluster
+#            - name: node.name
+#              value: opensearch-service
+#            - name: discovery.seed_hosts
+#              value: opensearch-service
+#            - name: cluster.initial_master_nodes
+#              value: opensearch-service
+      #    volumeMounts:
+      #      - mountPath: /usr/share/opensearch/data
+      #        name: opensearch-claim0
+      #volumes:
+      #  - name: opensearch-claim0
+      #    persistentVolumeClaim:
+      #      claimName: opensearch-claim0
+#          volumeMounts:
+#            - mountPath: /usr/share/opensearch/data
+#              readOnly: true
+#              name: db-location
+#      volumes:
+#        - name: db-location
+#          hostPath:
+#            path: /data/kubernetes/gsoc2-opensearch
+#            type: DirectoryOrCreate

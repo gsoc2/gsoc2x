@@ -1,0 +1,131 @@
+version: '3.4'
+services:
+  backend:
+    image: ghcr.io/gsoc2/gsoc2-backend:nightly
+    #hostname: gsoc2-backend
+    environment:
+      BACKEND_HOSTNAME: backend
+      OUTER_HOSTNAME: backend
+      BACKEND_PORT: '5001'
+      HTTPS_PROXY: ''
+      HTTP_PROXY: ''
+      GSOC2_APP_DOWNLOAD_LOCATION: https://github.com/gsoc2/gsoc2-apps
+      GSOC2_APP_FORCE_UPDATE: 'false'
+      GSOC2_APP_HOTLOAD_FOLDER: /gsoc2-apps
+      GSOC2_APP_HOTLOAD_LOCATION: ./gsoc2-apps
+      DATASTORE_EMULATOR_HOST: "gsoc2-database:8000"
+      DOCKER_API_VERSION: '1.40'
+      GSOC2_BASE_IMAGE_NAME: gsoc2
+      GSOC2_BASE_IMAGE_REGISTRY: ghcr.io
+      GSOC2_BASE_IMAGE_TAG_SUFFIX: '-0.9.30'
+      GSOC2_CONTAINER_AUTO_CLEANUP: 'true'
+      GSOC2_DEFAULT_APIKEY: ''
+      GSOC2_FILE_LOCATION: /gsoc2-files
+      GSOC2_OPENSEARCH_APIKEY: ''
+      GSOC2_OPENSEARCH_CERTIFICATE_FILE: ''
+      GSOC2_OPENSEARCH_CLOUDID: ''
+      GSOC2_OPENSEARCH_PROXY: ''
+      GSOC2_OPENSEARCH_SKIPSSL_VERIFY: 'true'
+      GSOC2_OPENSEARCH_URL: http://opensearch:9200
+      GSOC2_PASS_APP_PROXY: 'FALSE'
+      GSOC2_PASS_WORKER_PROXY: 'TRUE'
+      GSOC2_ELASTIC: 'true'
+      #GSOC2_ENCRYPTION_MODIFIER:
+    ports:
+      - "5001:5001"
+    volumes:
+     - /var/run/docker.sock:/var/run/docker.sock
+     - ./gsoc2-apps:/gsoc2-apps
+     - ./gsoc2-files:/gsoc2-files
+    networks:
+     - gsoc2_prod
+     #- reverseproxy
+    depends_on:
+     - opensearch 
+    logging:
+      driver: json-file
+  frontend:
+    image: ghcr.io/gsoc2/gsoc2-frontend:nightly
+    healthcheck:
+      test: curl -fs http://localhost:80 || exit 1
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    ports:
+      - "3001:80"
+      - "3443:443"
+    networks:
+      - gsoc2_prod
+      #- reverseproxy
+    environment:
+      - "BACKEND_HOSTNAME=backend"
+    depends_on:
+      - backend
+    deploy:
+      update_config:
+        order: start-first           
+  opensearch:
+    image: opensearchproject/opensearch:1.1.0
+    healthcheck:
+      test: curl -fs http://localhost:9200/_cat/health || exit 1
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    environment:
+      - bootstrap.memory_lock=false
+      - "OPENSEARCH_JAVA_OPTS=-Xms1024m -Xmx1024m" # minimum and maximum Java heap size, recommend setting both to 50% of system RAM
+      - plugins.security.disabled=true
+      - cluster.routing.allocation.disk.threshold_enabled=false
+      - cluster.name=gsoc2-cluster
+      - node.name=opensearch
+      - discovery.seed_hosts=opensearch
+      - cluster.initial_master_nodes=opensearch
+      - node.store.allow_mmap=false
+    volumes:
+     - ./gsoc2-database:/usr/share/opensearch/data:rw
+    networks:
+     - gsoc2_prod
+     #- reverseproxy
+    logging:
+      driver: json-file
+      
+  orborus:
+    image: ghcr.io/gsoc2/gsoc2-orborus:nightly
+    #hostname: gsoc2-orborus 
+    environment:
+      #GSOC2_WORKER_VERSION: nightly
+      GSOC2_APP_SDK_VERSION: 0.8.97
+      GSOC2_WORKER_VERSION: nightly
+      BASE_URL: http://backend:5001
+      #BASE_URL: http://192.168.86.37:5001
+      CLEANUP: 'true'
+      DOCKER_API_VERSION: '1.40'
+      ENVIRONMENT_NAME: Gsoc2
+      HTTPS_PROXY: ''
+      HTTP_PROXY: ''
+      ORG_ID: Gsoc2
+      GSOC2_BASE_IMAGE_NAME: gsoc2
+      GSOC2_BASE_IMAGE_REGISTRY: ghcr.io
+      GSOC2_BASE_IMAGE_TAG_SUFFIX: -0.8.80
+      GSOC2_ORBORUS_EXECUTION_CONCURRENCY: '50'
+      GSOC2_ORBORUS_EXECUTION_TIMEOUT: '800'
+      GSOC2_PASS_APP_PROXY: 'FALSE'
+      GSOC2_PASS_WORKER_PROXY: 'TRUE'
+      GSOC2_SCALE_REPLICAS: 5
+      GSOC2_SWARM_NETWORK_NAME: gsoc2_prod
+      GSOC2_SWARM_CONFIG: "run"
+    volumes:
+     - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+     - gsoc2_prod
+     #- reverseproxy
+    logging:
+      driver: json-file
+
+networks:
+  gsoc2_prod:
+    driver: overlay
+    external: true
+  #reverseproxy:
+  #  driver: overlay
+  #  #external: true

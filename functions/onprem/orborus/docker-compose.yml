@@ -1,0 +1,25 @@
+version: '3'
+services:
+  orborus:
+    image: ghcr.io/gsoc2/gsoc2-orborus:nightly
+    container_name: gsoc2-orborus
+    hostname: gsoc2-orborus
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - GSOC2_APP_SDK_VERSION=nightly
+      - GSOC2_WORKER_VERSION=nightly
+      - ORG_ID=Gsoc2
+      - ENVIRONMENT_NAME=Gsoc2
+      - BASE_URL=http://192.168.86.39:5001
+      - DOCKER_API_VERSION=1.40
+      - GSOC2_SCALE_REPLICAS=5
+      - GSOC2_SWARM_CONFIG=run
+    restart: unless-stopped
+    networks:
+      - gsoc2-executions
+networks:
+  gsoc2-executions:
+    driver: overlay
+    external: true
+

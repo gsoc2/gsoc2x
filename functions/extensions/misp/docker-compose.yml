@@ -1,0 +1,9 @@
+version: '3'
+services:
+  zmq:
+    image: ghcr.io/gsoc2/gsoc2-zmq:latest
+    environment:
+      - ZMQ_HOSTNAME=localhost
+      - ZMQ_PORT=50000
+      - ZMQ_FORWARD_URL=https://gsoc2r.io/api/v1/hooks/webhook_e09bea36-9976-1421-82bc-b8764ca83c1e
+    restart: unless-stopped

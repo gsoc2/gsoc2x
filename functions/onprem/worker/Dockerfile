@@ -31,7 +31,7 @@ FROM alpine:3.15.0
 
 ENV GSOC2_BASE_IMAGE_REGISTRY=docker.io
 ENV GSOC2_BASE_IMAGE_NAME=gsoc2/gsoc2
-ENV GSOC2_BASE_IMAGE_TAG_GSOC2=0.8.70
+ENV GSOC2_BASE_IMAGE_TAG_SUFFIX=0.8.70
 
 RUN apk add --no-cache bash tzdata
 COPY --from=builder /app/ /
