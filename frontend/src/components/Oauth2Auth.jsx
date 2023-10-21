@@ -318,7 +318,7 @@ const AuthenticationOauth2 = (props) => {
 
 		// This is to make sure authorization can be handled WITHOUT being logged in,
 		// kind of making it act like an api key
-		// https://gsoc2r.io/authorization -> 3rd party integration auth
+		// https://soc2.khulnasoft.com/authorization -> 3rd party integration auth
 		const urlParams = new URLSearchParams(window.location.search);
 		const userAuth = urlParams.get("authorization");
 		if (userAuth !== undefined && userAuth !== null && userAuth.length > 0) {

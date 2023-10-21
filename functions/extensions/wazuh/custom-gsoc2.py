@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Created by Gsoc2, AS. <gsoc2@gsoc2r.io>.
+# Created by Gsoc2, AS. <gsoc2@soc2.khulnasoft.com>.
 # Based on the Slack integration using Webhooks
 
 import json

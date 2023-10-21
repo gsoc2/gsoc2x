@@ -61,7 +61,7 @@ if __name__ == "__main__":
 
     location = "europe-west2"
     functionname = "hello-world-1-0-6"
-    project = "gsoc2r"
+    project = "gsoc2"
 
     url = f"https://{location}-{project}.cloudfunctions.net/{functionname}"
     print(url)

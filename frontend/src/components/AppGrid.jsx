@@ -30,7 +30,7 @@ const AppGrid = props => {
 
   const isCloud =
     window.location.host === "localhost:3002" ||
-    window.location.host === "gsoc2r.io";
+    window.location.host === "soc2.khulnasoft.com";
 
 	const rowHandler = maxRows === undefined || maxRows === null ? 50 : maxRows
 	const xs = parsedXs === undefined || parsedXs === null ? isMobile ? 6 : 2 : parsedXs
@@ -58,7 +58,7 @@ const AppGrid = props => {
 			"message": message,
 		}
 	
-		const errorMessage = "Something went wrong. Please contact gsoc2@gsoc2r.io directly."
+		const errorMessage = "Something went wrong. Please contact gsoc2@soc2.khulnasoft.com directly."
 
 		fetch(globalUrl+"/api/v1/contact", {
 			method: 'POST',
@@ -186,7 +186,7 @@ const AppGrid = props => {
 					}
 					
 					parsedname = (parsedname.charAt(0).toUpperCase()+parsedname.substring(1)).replaceAll("_", " ")
-					const appUrl = isCloud ? `/apps/${data.objectID}?queryID=${data.__queryID}` : `https://gsoc2r.io/apps/${data.objectID}?queryID=${data.__queryID}`
+					const appUrl = isCloud ? `/apps/${data.objectID}?queryID=${data.__queryID}` : `https://soc2.khulnasoft.com/apps/${data.objectID}?queryID=${data.__queryID}`
 					return (
 						<Zoom key={index} in={true} style={{ transitionDelay: `${workflowDelay}ms` }}>
 							<Grid item xs={xs} key={index}>

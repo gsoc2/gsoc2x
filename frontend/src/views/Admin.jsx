@@ -189,7 +189,7 @@ const Admin = (props) => {
     }
   }, [isDropzone]);
 
-  const isCloud = window.location.host === "localhost:3002" || window.location.host === "gsoc2r.io";
+  const isCloud = window.location.host === "localhost:3002" || window.location.host === "soc2.khulnasoft.com";
 
   const get2faCode = (userId) => {
     fetch(`${globalUrl}/api/v1/users/${userId}/get2fa`, {
@@ -453,7 +453,7 @@ ${usecases}
 
 Let me know if you're interested, or set up a call here: https://drift.me/${username}`
 
-		return `mailto:${admins}?bcc=gsoc2@gsoc2r.io&subject=${subject}&body=${body}`
+		return `mailto:${admins}?bcc=gsoc2@soc2.khulnasoft.com&subject=${subject}&body=${body}`
 	}
 
   const deleteAuthentication = (data) => {
@@ -931,7 +931,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
 		}
 
     if (orgId.length === 0) {
-      alert.error("Organization ID not defined. Please contact us on https://gsoc2r.io if this persists logout.");
+      alert.error("Organization ID not defined. Please contact us on https://soc2.khulnasoft.com if this persists logout.");
       return;
     }
 
@@ -2367,7 +2367,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
 												console.log("Should send mail to admins of org with context")
 												handleStatusChange({target: {value: ["contacted"]}})
 
-												// open a mailto with subject "hello" and sender "gsoc2@gsoc2r.io"
+												// open a mailto with subject "hello" and sender "gsoc2@soc2.khulnasoft.com"
 										}}
 									>
 										Sales mail
@@ -3792,7 +3792,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
         }
       })
       .catch((error) => {
-        alert.info("Failed dismissing alert. Please contact support@gsoc2r.io if this persists.");
+        alert.info("Failed dismissing alert. Please contact support@soc2.khulnasoft.com if this persists.");
       });
 	}
 
@@ -4080,7 +4080,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
 															90% CPU the server(s) hosting the Gsoc2 App Runner (Orborus) was found.  
 														</Typography>
 														<Typography variant="body2" color="textSecondary">
-															Need help with High Availability and Scale? <a href="/docs/configuration#scale" target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: "#f85a3e" }}>Read documentation</a> and <a href="https://gsoc2r.io/contact" target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: "#f85a3e" }}>Get in touch</a>.  
+															Need help with High Availability and Scale? <a href="/docs/configuration#scale" target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: "#f85a3e" }}>Read documentation</a> and <a href="https://soc2.khulnasoft.com/contact" target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: "#f85a3e" }}>Get in touch</a>.  
 														</Typography>
 													</div>
 													<div style={{flex: 1, display: "flex", marginLeft: 30, }}>

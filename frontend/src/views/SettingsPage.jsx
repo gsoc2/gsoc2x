@@ -74,7 +74,7 @@ const Settings = (props) => {
   //Returns the value from a storage position at a given address.
   const isCloud =
     window.location.host === "localhost:3002" ||
-    window.location.host === "gsoc2r.io"
+    window.location.host === "soc2.khulnasoft.com"
 
   const bodyDivStyle = {
     margin: "auto",
@@ -738,7 +738,7 @@ const Settings = (props) => {
   					{isCloud ?
 							<span>
 								<Typography variant="body1" color="textSecondary">
-									By connecting your Github account, you agree to our <a href="/docs/terms_of_service" target="_blank" style={{ textDecoration: "none", color: "#f86a3e"}}>Terms of Service</a>, and acknowledge that your non-sensitive data will be turned into a <a target="_blank" style={{ textDecoration: "none", color: "#f86a3e"}} href="https://gsoc2r.io/creators">creator account</a>. This enables you to earn a passive income from Gsoc2. This IS reversible. Support: support@gsoc2r.io
+									By connecting your Github account, you agree to our <a href="/docs/terms_of_service" target="_blank" style={{ textDecoration: "none", color: "#f86a3e"}}>Terms of Service</a>, and acknowledge that your non-sensitive data will be turned into a <a target="_blank" style={{ textDecoration: "none", color: "#f86a3e"}} href="https://soc2.khulnasoft.com/creators">creator account</a>. This enables you to earn a passive income from Gsoc2. This IS reversible. Support: support@soc2.khulnasoft.com
 								</Typography>
 								<Button
 									style={{ height: 40, marginTop: 10 }}
@@ -937,7 +937,7 @@ const Settings = (props) => {
 		const redirectUri = isCloud
 			? window.location.host === "localhost:3002"
 				? "http%3A%2F%2Flocalhost:3002%2Fset_authentication"
-				: "https%3A%2F%2Fgsoc2r.io%2Fset_authentication"
+				: "https%3A%2F%2Fsoc2.khulnasoft.com%2Fset_authentication"
 			: window.location.protocol === "http:" ? 
 				`http%3A%2F%2F${window.location.host}%2Fset_authentication`
 				:

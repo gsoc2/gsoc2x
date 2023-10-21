@@ -7,7 +7,7 @@ const PrivacyPolicy = () => {
 
       <p>Effective date: 17.08.2019</p>
 
-      <p>We operate the gsoc2r.io website.</p>
+      <p>We operate the soc2.khulnasoft.com website.</p>
 
       <p>
         This page informs you of our policies regarding the collection, use, and
@@ -20,7 +20,7 @@ const PrivacyPolicy = () => {
         service, you agree to the collection and use of information in
         accordance with this policy. Unless otherwise defined in this Privacy
         Policy, terms used in this Privacy Policy have the same meanings as in
-        our Terms and Conditions, accessible from gsoc2r.io
+        our Terms and Conditions, accessible from soc2.khulnasoft.com
       </p>
 
       <h2>Information Collection And Use</h2>
@@ -91,7 +91,7 @@ const PrivacyPolicy = () => {
 
       <h2>Use of Data</h2>
 
-      <p>Gsoc2r uses the collected data for various purposes:</p>
+      <p>Gsoc2 uses the collected data for various purposes:</p>
       <ul>
         <li>To provide and maintain the service</li>
         <li>To notify you about changes to our service</li>
@@ -125,7 +125,7 @@ const PrivacyPolicy = () => {
         information represents your agreement to that transfer.
       </p>
       <p>
-        Gsoc2r will take all steps reasonably necessary to ensure that your
+        Gsoc2 will take all steps reasonably necessary to ensure that your
         data is treated securely and in accordance with this Privacy Policy and
         no transfer of your Personal Data will take place to an organization or
         a country unless there are adequate controls in place including the
@@ -136,12 +136,12 @@ const PrivacyPolicy = () => {
 
       <h3>Legal Requirements</h3>
       <p>
-        Gsoc2r may disclose your Personal Data in the good faith belief that
+        Gsoc2 may disclose your Personal Data in the good faith belief that
         such action is necessary to:
       </p>
       <ul>
         <li>To comply with a legal obligation</li>
-        <li>To protect and defend the rights or property of Gsoc2r</li>
+        <li>To protect and defend the rights or property of Gsoc2</li>
         <li>
           To prevent or investigate possible wrongdoing in connection with the
           service

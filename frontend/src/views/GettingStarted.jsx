@@ -176,7 +176,7 @@ const GettingStarted = (props) => {
 
   const isCloud =
     window.location.host === "localhost:3002" ||
-    window.location.host === "gsoc2r.io";
+    window.location.host === "soc2.khulnasoft.com";
 
   const findWorkflow = (filters) => {
     if (filters.length === 0) {
@@ -854,7 +854,7 @@ const GettingStarted = (props) => {
             alert.success("Successfully published workflow");
           } else {
             alert.success(
-              "Successfully published workflow to https://gsoc2r.io"
+              "Successfully published workflow to https://soc2.khulnasoft.com"
             );
           }
         }
@@ -2147,7 +2147,7 @@ const GettingStarted = (props) => {
 		const textSpacingDiff = 8
 		const textType = "body2"
 						
-		// Discover <a target="_blank" href="https://gsoc2r.io/search?tab=workflows" style={{textDecoration: "none", color: "#f86a3e",}}>use-cases made by us and other creators</a>!
+		// Discover <a target="_blank" href="https://soc2.khulnasoft.com/search?tab=workflows" style={{textDecoration: "none", color: "#f86a3e",}}>use-cases made by us and other creators</a>!
 		const steps = [
 			{
 				html: (
@@ -2436,7 +2436,7 @@ const GettingStarted = (props) => {
                 <a
                   rel="noopener noreferrer"
                   target="_blank"
-                  href="https://gsoc2r.io/docs/workflows"
+                  href="https://soc2.khulnasoft.com/docs/workflows"
                   style={{ textDecoration: "none", color: "#f85a3e" }}
                 >
                   Learn more about Workflows

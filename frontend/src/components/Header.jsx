@@ -77,7 +77,7 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 		textDecoration: "none",
 	}
 
-  const isCloud = serverside === true || typeof window === 'undefined' ? true : window.location.host === "localhost:3002" || window.location.host === "gsoc2r.io";
+  const isCloud = serverside === true || typeof window === 'undefined' ? true : window.location.host === "localhost:3002" || window.location.host === "soc2.khulnasoft.com";
 
 	const clearNotifications = () => {
 		// Don't really care about the logout
@@ -873,7 +873,7 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 										var regiontag = "eu"
 										if (data.region_url !== undefined && data.region_url !== null && data.region_url.length > 0) {
 											const regionsplit = data.region_url.split(".")
-											if (regionsplit.length > 2 && !regionsplit[0].includes("gsoc2r")) {
+											if (regionsplit.length > 2 && !regionsplit[0].includes("gsoc2")) {
 												const namesplit = regionsplit[0].split("/")
 
 												regiontag = namesplit[namesplit.length - 1]
@@ -898,7 +898,7 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 						{userdata === undefined || userdata.app_execution_limit === undefined || userdata.app_execution_usage === undefined || userdata.app_execution_usage < 1000 ? 
 							null
 							:
-							<Tooltip title={`Amount of executions left: ${userdata.app_execution_usage} / ${userdata.app_execution_limit}. When the limit is reached, you can still use Gsoc2 normally, but your Workflow triggers may stop working. Reach out to support@gsoc2r.io to extend this limit.`}>
+							<Tooltip title={`Amount of executions left: ${userdata.app_execution_usage} / ${userdata.app_execution_limit}. When the limit is reached, you can still use Gsoc2 normally, but your Workflow triggers may stop working. Reach out to support@soc2.khulnasoft.com to extend this limit.`}>
 								<div style={{maxHeight: 30, minHeight: 30, padding: 8, textAlign: "center", cursor: "pointer", borderRadius: theme.palette.borderRadius, marginRight: 10, marginTop: 12, backgroundColor: theme.palette.surfaceColor, minWidth: 60, maxWidth: 60,  }} onClick={() => {
 										if (window.drift !== undefined) {
 											window.drift.api.startInteraction({ interactionId: 326905 })

@@ -1896,7 +1896,7 @@ const MyView = (props) => {
                 <a
                   rel="norefferer"
                   target="_blank"
-                  href="https://gsoc2r.io/docs/workflows"
+                  href="https://soc2.khulnasoft.com/docs/workflows"
                   target="_blank"
                   style={{ textDecoration: "none", color: "#f85a3e" }}
                 >

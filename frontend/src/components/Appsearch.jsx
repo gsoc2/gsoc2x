@@ -14,7 +14,7 @@ const searchClient = algoliasearch("JNSS5CFDZZ", "db08e40265e2941b9a7d8f644b6e52
 const Appsearch = props => {
 	const { maxRows, showName, showSuggestion, isMobile, globalUrl, parsedXs, newSelectedApp, setNewSelectedApp, defaultSearch, showSearch, ConfiguredHits, userdata, cy, isCreatorPage, actionImageList, setActionImageList}  = props
 
-  const isCloud = window.location.host === "localhost:3002" || window.location.host === "gsoc2r.io";
+  const isCloud = window.location.host === "localhost:3002" || window.location.host === "soc2.khulnasoft.com";
   const alert = useAlert();
 	const rowHandler = maxRows === undefined || maxRows === null ? 50 : maxRows
 	const xs = parsedXs === undefined || parsedXs === null ? 12 : parsedXs
@@ -81,7 +81,7 @@ const Appsearch = props => {
 			"message": message,
 		}
 	
-		const errorMessage = "Something went wrong. Please contact gsoc2@gsoc2r.io directly."
+		const errorMessage = "Something went wrong. Please contact gsoc2@soc2.khulnasoft.com directly."
 
 		fetch(globalUrl+"/api/v1/contact", {
 			method: 'POST',

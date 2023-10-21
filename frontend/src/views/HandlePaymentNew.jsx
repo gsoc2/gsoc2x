@@ -47,7 +47,7 @@ const PaymentField = (props) => {
 
   const isCloud =
     window.location.host === "localhost:3002" ||
-    window.location.host === "gsoc2r.io";
+    window.location.host === "soc2.khulnasoft.com";
 
 	// Multiple unused variables here
   let navigate = useNavigate();
@@ -339,7 +339,7 @@ const PaymentField = (props) => {
 	},
 	{
 		"name": "Email & Chat Support",
-		"basic": "support@gsoc2r.io",
+		"basic": "support@soc2.khulnasoft.com",
 		"community": "No",
 		"pro": "Prioritized + Critical issue SLA",
 		"enterprise": "",
@@ -916,7 +916,7 @@ const PaymentField = (props) => {
 	const topRet = 
 		<div style={{textAlign: "center"}}>
 			<Typography variant={isMobile ? "h4" : "h2"} style={{marginTop: 60,}}>Pricing</Typography>	
-			{/*<Typography variant="body1" style={{marginTop: 15,}}>Find pricing, focused on gsoc2r.io and self-hosted</Typography>*/}
+			{/*<Typography variant="body1" style={{marginTop: 15,}}>Find pricing, focused on soc2.khulnasoft.com and self-hosted</Typography>*/}
 			{/*<Typography variant="body1" color="textSecondary" style={{}}>These prices are likely to change</Typography>*/}
 			<div style={{width: "100%", margin: "auto", backgroundColor: "#1f2023", position: "sticky", top: 0, paddingBottom: 20, zIndex: 10000,}}>
 				<ButtonGroup style={{height: 50, marginTop: 30, }} color="primary" aria-label="outlined secondary button group">
@@ -957,7 +957,7 @@ const PaymentField = (props) => {
 								<Typography variant="h4">Free</Typography>
 								<Typography variant="body1" color="textSecondary">
 									{gsoc2Variant === 0 ? 
-										"gsoc2r.io / Cloud"
+										"soc2.khulnasoft.com / Cloud"
 									: 
 										<a rel="noreferrer noopener" target="_blank" style={{textDecoration: "none", color: "#f85a3e",}} href="https://github.com/gsoc2/gsoc2">Open Source</a> 
 									}
@@ -1077,7 +1077,7 @@ const PaymentField = (props) => {
 										if (isLoggedIn) {
 											console.log("Redirecting to Stripe!")
 		
-											const priceItem = window.location.origin === "https://gsoc2r.io" ? "app_executions" : "price_1MROFrDzMUgUjxHShcSxgHO1"
+											const priceItem = window.location.origin === "https://soc2.khulnasoft.com" ? "app_executions" : "price_1MROFrDzMUgUjxHShcSxgHO1"
 
 											const successUrl = `${window.location.origin}/admin?admin_tab=billing&payment=success`
 											const failUrl = `${window.location.origin}/pricing?admin_tab=billing&payment=failure`
@@ -1393,7 +1393,7 @@ const PaymentField = (props) => {
 						<Typography variant="body1" color="textSecondary" style={{marginBottom: 200}}>
 							If you got more questions about our pricing and plans, please <Link to="/contact" style={{textDecoration: "none", color: theme.palette.primary.main}}>contact us</Link> so we can help	
 						</Typography>
-						<Newsletter globalUrl={"https://gsoc2r.io"} />
+						<Newsletter globalUrl={"https://soc2.khulnasoft.com"} />
 					</div>
 				</span>
 			}

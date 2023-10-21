@@ -11,7 +11,7 @@ This is the SDK used for apps to behave like they should.
 ## Cloud updates
 1. Go to gsoc2 cloud on GCP
 2. Go to Cloud Storage
-3. Find gsoc2r.appspot.com
+3. Find gsoc2.appspot.com
 4. Navigate to generated_apps/baseline
 5. Update SDK there. This will make all new apps run with the new SDK
 

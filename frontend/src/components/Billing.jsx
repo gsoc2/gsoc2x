@@ -34,7 +34,7 @@ const Billing = (props) => {
 
   const isCloud =
     window.location.host === "localhost:3002" ||
-    window.location.host === "gsoc2r.io";
+    window.location.host === "soc2.khulnasoft.com";
 
 	billingInfo.subscription = {
 		"active": true,

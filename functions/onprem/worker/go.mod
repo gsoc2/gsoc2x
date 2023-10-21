@@ -29,7 +29,7 @@ require (
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/gsoc2/go-elasticsearch/v8 v8.13.1 // indirect
-	github.com/gsoc2/kin-openapi v0.41.0 // indirect
+	github.com/gsoc2/gsoc2-shared/kin-openapi v0.41.0 // indirect
 	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/go-openapi/jsonpointer v0.19.5 // indirect
 	github.com/go-openapi/swag v0.19.5 // indirect

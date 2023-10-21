@@ -2805,7 +2805,7 @@ const ParsedAction = (props) => {
                   onClick={() => {}}
                 >
                   <a
-                    href="https://gsoc2r.io/docs/workflows#nodes"
+                    href="https://soc2.khulnasoft.com/docs/workflows#nodes"
                     rel="norefferer"
                     target="_blank"
                     style={{ textDecoration: "none", color: "#f85a3e" }}
@@ -2871,7 +2871,7 @@ const ParsedAction = (props) => {
                     title={"Find related workflows"}
                     placement="top"
                   >
-										<a href={`https://gsoc2r.io/search?tab=workflows&q=${selectedAction.app_name}`} target="_blank">
+										<a href={`https://soc2.khulnasoft.com/search?tab=workflows&q=${selectedAction.app_name}`} target="_blank">
 											<SearchIcon style={{ color: "rgba(255,255,255,0.7)"}} />
 										</a>
                   </Tooltip>

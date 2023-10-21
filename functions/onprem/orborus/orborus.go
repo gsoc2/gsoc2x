@@ -948,7 +948,7 @@ func main() {
 
 	//FIXME
 	if baseUrl == "" {
-		baseUrl = "https://gsoc2r.io"
+		baseUrl = "https://soc2.khulnasoft.com"
 		//baseUrl = "http://localhost:5001"
 	}
 

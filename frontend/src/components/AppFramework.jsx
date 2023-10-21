@@ -544,7 +544,7 @@ const AppFramework = (props) => {
 		
 		// Based on apps recommended from repo https://github.com/Gsoc2/app-recommender
 		//fetch("http://localhost:8080/app_recommendations", {
-		fetch("https://europe-west2-gsoc2r.cloudfunctions.net/app_recommendations", {
+		fetch("https://europe-west2-gsoc2.cloudfunctions.net/app_recommendations", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -948,7 +948,7 @@ const AppFramework = (props) => {
 	}, [newSelectedApp])
 
 
-  const isCloud = window.location.host === "localhost:3002" || window.location.host === "gsoc2r.io";
+  const isCloud = window.location.host === "localhost:3002" || window.location.host === "soc2.khulnasoft.com";
     
 
   const imgSize = 50;

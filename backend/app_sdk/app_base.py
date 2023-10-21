@@ -292,8 +292,8 @@ class AppBase:
         # apikey is for the user / org
         # authorization is for the specific workflow
 
-        self.url = os.getenv("CALLBACK_URL",  "https://gsoc2r.io")
-        self.base_url = os.getenv("BASE_URL", "https://gsoc2r.io")
+        self.url = os.getenv("CALLBACK_URL",  "https://soc2.khulnasoft.com")
+        self.base_url = os.getenv("BASE_URL", "https://soc2.khulnasoft.com")
         self.action = os.getenv("ACTION", "")
         self.original_action = os.getenv("ACTION", "")
         self.authorization = os.getenv("AUTHORIZATION", "")
@@ -2967,7 +2967,7 @@ class AppBase:
                 self.action_result["result"] = json.dumps({
                     "success": False,
                     "reason": f"Function {actionname} doesn't exist, or the App is out of date.",
-                    "details": "If this persists, please restart delete the Docker image locally, restart your Orborus instance and then try again to force-download the latest version. Contact support@gsoc2r.io with this data if the issue persists.",
+                    "details": "If this persists, please restart delete the Docker image locally, restart your Orborus instance and then try again to force-download the latest version. Contact support@soc2.khulnasoft.com with this data if the issue persists.",
                 })
             elif callable(func):
                 try:
@@ -3470,7 +3470,7 @@ class AppBase:
                                 if iteration_count >= 10:
                                     newres = {
                                         "success": False,
-                                        "reason": "Iteration count more than 10. This happens if the input to the action is wrong. Try remaking the action, and contact support@gsoc2r.io if this persists.", 
+                                        "reason": "Iteration count more than 10. This happens if the input to the action is wrong. Try remaking the action, and contact support@soc2.khulnasoft.com if this persists.", 
                                         "details": found_error,
                                     }
                                     break
@@ -3563,7 +3563,7 @@ class AppBase:
 
                                         newres = json.dumps({
                                             "success": False,
-                                            "reason": "An exception occurred while running this function (1). See exception for more details and contact support if this persists (support@gsoc2r.io)",
+                                            "reason": "An exception occurred while running this function (1). See exception for more details and contact support if this persists (support@soc2.khulnasoft.com)",
                                             "exception": e,
                                         })
                                         break
@@ -3580,7 +3580,7 @@ class AppBase:
                                     else:
                                         newres = json.dumps({
                                             "success": False,
-                                            "reason": "You may be running an old version of this action. Try remaking the node, then contact us at support@gsoc2r.io if it doesn't work with all these details.",
+                                            "reason": "You may be running an old version of this action. Try remaking the node, then contact us at support@soc2.khulnasoft.com if it doesn't work with all these details.",
                                             "exception": f"TypeError: {e}",
                                         })
                                         break
@@ -3594,7 +3594,7 @@ class AppBase:
 
                                     newres = json.dumps({
                                         "success": False,
-                                        "reason": "An exception occurred while running this function (2). See exception for more details and contact support if this persists (support@gsoc2r.io)",
+                                        "reason": "An exception occurred while running this function (2). See exception for more details and contact support if this persists (support@soc2.khulnasoft.com)",
                                         "exception": e,
                                     })
                                     break

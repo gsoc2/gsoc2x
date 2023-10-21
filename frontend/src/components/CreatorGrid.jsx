@@ -55,7 +55,7 @@ const CreatorGrid = props => {
 
 	const isCloud =
 		window.location.host === "localhost:3002" ||
-		window.location.host === "gsoc2r.io";
+		window.location.host === "soc2.khulnasoft.com";
 
 	const innerColor = "rgba(255,255,255,0.65)"
 	const borderRadius = 3
@@ -72,7 +72,7 @@ const CreatorGrid = props => {
 			"message": message,
 		}
 	
-		const errorMessage = "Something went wrong. Please contact gsoc2@gsoc2r.io directly."
+		const errorMessage = "Something went wrong. Please contact gsoc2@soc2.khulnasoft.com directly."
 
 		fetch(globalUrl+"/api/v1/contact", {
 			method: 'POST',
@@ -163,7 +163,7 @@ const CreatorGrid = props => {
 					}
 
 					counted += 1
-					const creatorUrl = !isCloud ? `https://gsoc2r.io/creators/${data.username}` : `/creators/${data.username}`
+					const creatorUrl = !isCloud ? `https://soc2.khulnasoft.com/creators/${data.username}` : `/creators/${data.username}`
 
 					return (
 						<Zoom key={index} in={true} style={{}}>

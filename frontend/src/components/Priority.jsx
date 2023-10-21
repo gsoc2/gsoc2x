@@ -61,7 +61,7 @@ const Priority = (props) => {
         }
       })
       .catch((error) => {
-        alert.info("Failed dismissing alert. Please contact support@gsoc2r.io if this persists.");
+        alert.info("Failed dismissing alert. Please contact support@soc2.khulnasoft.com if this persists.");
       });
 	}
 

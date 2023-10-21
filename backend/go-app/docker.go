@@ -636,9 +636,9 @@ func getDockerImage(resp http.ResponseWriter, request *http.Request) {
 	//resp.WriteHeader(200)
 }
 
-// Downloads and activates an app from gsoc2r.io if possible
+// Downloads and activates an app from soc2.khulnasoft.com if possible
 func handleRemoteDownloadApp(resp http.ResponseWriter, ctx context.Context, user gsoc2.User, appId string) {
-	url := fmt.Sprintf("https://gsoc2r.io/api/v1/apps/%s/config", appId)
+	url := fmt.Sprintf("https://soc2.khulnasoft.com/api/v1/apps/%s/config", appId)
 	log.Printf("Downloading API from %s", url)
 	req, err := http.NewRequest(
 		"GET",

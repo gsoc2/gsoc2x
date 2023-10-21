@@ -388,7 +388,7 @@ const useStyles = makeStyles({
 
 const splitter = "|~|";
 const svgSize = 24;
-//const referenceUrl = "https://gsoc2r.io/functions/webhooks/"
+//const referenceUrl = "https://soc2.khulnasoft.com/functions/webhooks/"
 //const referenceUrl = window.location.origin+"/api/v1/hooks/"
 
 const searchClient = algoliasearch("JNSS5CFDZZ", "db08e40265e2941b9a7d8f644b6e5240")
@@ -554,7 +554,7 @@ const AngularWorkflow = (defaultprops) => {
       : false;
   const isCloud =
     window.location.host === "localhost:3002" ||
-    window.location.host === "gsoc2r.io";
+    window.location.host === "soc2.khulnasoft.com";
 
   const appBarSize = isCloud ? 75 : 72;
   const triggerEnvironments = isCloud ? ["cloud"] : ["onprem", "cloud"];
@@ -1522,7 +1522,7 @@ const AngularWorkflow = (defaultprops) => {
           if (responseJson.reason !== undefined && responseJson.reason !== null) {
             alert.error("Failed to save: " + responseJson.reason);
           } else {
-            alert.error("Failed to save. Please contact your support@gsoc2r.io or your local admin if this is unexpected.")
+            alert.error("Failed to save. Please contact your support@soc2.khulnasoft.com or your local admin if this is unexpected.")
           }
         } else {
 
@@ -5998,7 +5998,7 @@ const AngularWorkflow = (defaultprops) => {
           What are{" "}
           <a
             rel="noopener noreferrer"
-            href="https://gsoc2r.io/docs/workflows#workflow_variables"
+            href="https://soc2.khulnasoft.com/docs/workflows#workflow_variables"
             target="_blank"
             style={{ textDecoration: "none", color: "#f85a3e" }}
           >
@@ -6048,7 +6048,7 @@ const AngularWorkflow = (defaultprops) => {
           What are{" "}
           <a
             rel="noopener noreferrer"
-            href="https://gsoc2r.io/docs/workflows#execution_variables"
+            href="https://soc2.khulnasoft.com/docs/workflows#execution_variables"
             target="_blank"
             style={{ textDecoration: "none", color: "#f85a3e" }}
           >
@@ -6511,7 +6511,7 @@ const AngularWorkflow = (defaultprops) => {
           alert.error(
             "App " +
             app.name +
-            " currently has no actions to perform. Please go to https://gsoc2r.io/apps to edit it."
+            " currently has no actions to perform. Please go to https://soc2.khulnasoft.com/apps to edit it."
           );
           return;
         }
@@ -7035,7 +7035,7 @@ const AngularWorkflow = (defaultprops) => {
                   })
                 }
 
-                var parsedUrl = isCloud ? `/apps/${hit.objectID}` : `https://gsoc2r.io/apps/${hit.objectID}`
+                var parsedUrl = isCloud ? `/apps/${hit.objectID}` : `https://soc2.khulnasoft.com/apps/${hit.objectID}`
                 parsedUrl += `?queryID=${hit.__queryID}`
 
                 return (
@@ -8061,7 +8061,7 @@ const AngularWorkflow = (defaultprops) => {
         <a
           rel="noopener noreferrer"
           target="_blank"
-          href="https://gsoc2r.io/docs/workflows#conditions"
+          href="https://soc2.khulnasoft.com/docs/workflows#conditions"
           style={{ textDecoration: "none", color: "#f85a3e" }}
         >
           Learn more
@@ -8545,7 +8545,7 @@ const AngularWorkflow = (defaultprops) => {
             <a
               rel="noopener noreferrer"
               target="_blank"
-              href="https://gsoc2r.io/docs/workflows#conditions"
+              href="https://soc2.khulnasoft.com/docs/workflows#conditions"
               style={{ textDecoration: "none", color: "#f85a3e" }}
             >
               What are conditions?
@@ -8806,7 +8806,7 @@ const AngularWorkflow = (defaultprops) => {
             const redirectUri = isCloud
               ? window.location.host === "localhost:3002"
                 ? "http%3A%2F%2Flocalhost:5002%2Fapi%2Fv1%2Ftriggers%2Fgmail%2Fregister"
-                : "https%3A%2F%2Fgsoc2r.io%2Fapi%2Fv1%2Ftriggers%2Fgmail%2Fregister"
+                : "https%3A%2F%2Fsoc2.khulnasoft.com%2Fapi%2Fv1%2Ftriggers%2Fgmail%2Fregister"
               : window.location.protocol === "http:" ?
                 `http%3A%2F%2F${window.location.host}%2Fapi%2Fv1%2Ftriggers%2Fgmail%2Fregister`
                 :
@@ -8900,7 +8900,7 @@ const AngularWorkflow = (defaultprops) => {
             const redirectUri = isCloud
               ? window.location.host === "localhost:3002"
                 ? "http%3A%2F%2Flocalhost:5002%2Fapi%2Fv1%2Ftriggers%2Foutlook%2Fregister"
-                : "https%3A%2F%2Fgsoc2r.io%2Fapi%2Fv1%2Ftriggers%2Foutlook%2Fregister"
+                : "https%3A%2F%2Fsoc2.khulnasoft.com%2Fapi%2Fv1%2Ftriggers%2Foutlook%2Fregister"
               : window.location.protocol === "http:" ?
                 `http%3A%2F%2F${window.location.host}%2Fapi%2Fv1%2Ftriggers%2Foutlook%2Fregister`
                 :
@@ -9011,7 +9011,7 @@ const AngularWorkflow = (defaultprops) => {
                 {outlookButton}
                 {gmailButton}
                 <Typography variant="body2" color="textSecondary" style={{ marginTop: 5 }}>
-                  If you have trouble using this trigger, please <a href="https://gsoc2r.io/contact" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>contact us</a> to get access
+                  If you have trouble using this trigger, please <a href="https://soc2.khulnasoft.com/contact" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>contact us</a> to get access
                 </Typography>
               </span>
             )}
@@ -9040,7 +9040,7 @@ const AngularWorkflow = (defaultprops) => {
                 </div>
                 {triggerFolders.length === 0 ?
                   <Typography variant="body2">
-                    No folders found. Please authenticate and make sure the user has access folders available. If this persists, <a href="https://gsoc2r.io/contact" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>contact us</a>.
+                    No folders found. Please authenticate and make sure the user has access folders available. If this persists, <a href="https://soc2.khulnasoft.com/contact" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>contact us</a>.
                   </Typography>
                   :
                   <Select
@@ -9158,7 +9158,7 @@ const AngularWorkflow = (defaultprops) => {
             <a
               rel="noopener noreferrer"
               target="_blank"
-              href="https://gsoc2r.io/docs/triggers#email"
+              href="https://soc2.khulnasoft.com/docs/triggers#email"
               style={{ textDecoration: "none", color: "#f85a3e" }}
             >
               What are email triggers?
@@ -9916,7 +9916,7 @@ const AngularWorkflow = (defaultprops) => {
               <a
                 rel="noopener noreferrer"
                 target="_blank"
-                href="https://gsoc2r.io/docs/triggers#subflow"
+                href="https://soc2.khulnasoft.com/docs/triggers#subflow"
                 style={{ textDecoration: "none", color: "#f85a3e" }}
               >
                 What are subflows?
@@ -10424,7 +10424,7 @@ const AngularWorkflow = (defaultprops) => {
               <a
                 rel="noopener noreferrer"
                 target="_blank"
-                href="https://gsoc2r.io/docs/workflows#comments"
+                href="https://soc2.khulnasoft.com/docs/workflows#comments"
                 style={{ textDecoration: "none", color: "#f85a3e" }}
               >
                 What are comments?
@@ -10668,7 +10668,7 @@ const AngularWorkflow = (defaultprops) => {
               <a
                 rel="noopener noreferrer"
                 target="_blank"
-                href="https://gsoc2r.io/docs/triggers#webhook"
+                href="https://soc2.khulnasoft.com/docs/triggers#webhook"
                 style={{ textDecoration: "none", color: "#f85a3e" }}
               >
                 What are webhooks?
@@ -10830,7 +10830,7 @@ const AngularWorkflow = (defaultprops) => {
                   if (e.target.value === "cloud") {
                     const tmpvalue = workflow.triggers[selectedTriggerIndex].parameters[0].value.split("/");
                     const urlpath = tmpvalue.slice(3, tmpvalue.length);
-                    const newurl = "https://gsoc2r.io/" + urlpath.join("/");
+                    const newurl = "https://soc2.khulnasoft.com/" + urlpath.join("/");
                     workflow.triggers[selectedTriggerIndex].parameters[0].value = newurl;
                   } else {
                     const tmpvalue = workflow.triggers[selectedTriggerIndex].parameters[0].value.split("/");
@@ -11488,7 +11488,7 @@ const AngularWorkflow = (defaultprops) => {
               <a
                 rel="noopener noreferrer"
                 target="_blank"
-                href="https://gsoc2r.io/docs/triggers#user_input"
+                href="https://soc2.khulnasoft.com/docs/triggers#user_input"
                 style={{ textDecoration: "none", color: "#f85a3e" }}
               >
                 What is the user input trigger?
@@ -11866,7 +11866,7 @@ const AngularWorkflow = (defaultprops) => {
               <a
                 rel="noopener noreferrer"
                 target="_blank"
-                href="https://gsoc2r.io/docs/triggers#schedule"
+                href="https://soc2.khulnasoft.com/docs/triggers#schedule"
                 style={{ textDecoration: "none", color: "#f85a3e" }}
               >
                 What are schedules?
@@ -14145,7 +14145,7 @@ const AngularWorkflow = (defaultprops) => {
 
                   {environments.length > 0 && defaultEnvironmentIndex < environments.length && nonskippedResults.length === 0 && environments[defaultEnvironmentIndex].Name !== "Cloud" ?
                     <Typography variant="body2" color="textSecondary" style={{}}>
-                      No results yet. Is Orborus running for the "{environments[defaultEnvironmentIndex].Name}" environment? <a href="/admin?tab=environments" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>Learn more</a>. If the Workflow doesn't start within 30 seconds with Orborus running, contact support: <a href="mailto:support@gsoc2r.io" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>support@gsoc2r.io</a>
+                      No results yet. Is Orborus running for the "{environments[defaultEnvironmentIndex].Name}" environment? <a href="/admin?tab=environments" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>Learn more</a>. If the Workflow doesn't start within 30 seconds with Orborus running, contact support: <a href="mailto:support@soc2.khulnasoft.com" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>support@soc2.khulnasoft.com</a>
                     </Typography>
                     : null}
                 </div>
@@ -14161,7 +14161,7 @@ const AngularWorkflow = (defaultprops) => {
 							<CircularProgress style={{ height: 45, width: 45, marginLeft: 20, marginRight: 20, }} /> 
 								{environments.length > 0 && defaultEnvironmentIndex < environments.length && nonskippedResults.length === 0 && environments[defaultEnvironmentIndex].Name !== "Cloud" ?
 									<Typography variant="body2" color="textSecondary" style={{}}>
-										No results yet. Is Orborus running for the "{environments[defaultEnvironmentIndex].Name}" environment? <a href="/admin?tab=environments" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>Learn more</a>. If the Workflow doesn't start within 30 seconds with Orborus running, contact support: <a href="mailto:support@gsoc2r.io" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>support@gsoc2r.io</a>
+										No results yet. Is Orborus running for the "{environments[defaultEnvironmentIndex].Name}" environment? <a href="/admin?tab=environments" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>Learn more</a>. If the Workflow doesn't start within 30 seconds with Orborus running, contact support: <a href="mailto:support@soc2.khulnasoft.com" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>support@soc2.khulnasoft.com</a>
 									</Typography>
 								: 
 								null}
@@ -15099,7 +15099,7 @@ const AngularWorkflow = (defaultprops) => {
             and used during execution. Learn more{" "}
             <a
               rel="noopener noreferrer"
-              href="https://gsoc2r.io/docs/workflows#execution_variables"
+              href="https://soc2.khulnasoft.com/docs/workflows#execution_variables"
               target="_blank"
               style={{ textDecoration: "none", color: "#f85a3e" }}
             >
@@ -15538,7 +15538,7 @@ const AngularWorkflow = (defaultprops) => {
           <a
             target="_blank"
             rel="noopener noreferrer"
-            href="https://gsoc2r.io/docs/apps#authentication"
+            href="https://soc2.khulnasoft.com/docs/apps#authentication"
             style={{ textDecoration: "none", color: "#f85a3e" }}
           >
             What is app authentication?
@@ -16106,7 +16106,7 @@ const AngularWorkflow = (defaultprops) => {
 
 		// Onprem not available yet (April 2023)
 		// Should: Make OpenAI work for them with their own key
-		//fetch("https://gsoc2r.io/api/v1/conversation", {
+		//fetch("https://soc2.khulnasoft.com/api/v1/conversation", {
 		fetch(`${globalUrl}/api/v1/conversation`, {
 			method: "POST",
 			headers: {

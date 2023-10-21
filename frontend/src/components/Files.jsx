@@ -385,7 +385,7 @@ const Files = (props) => {
 						<a
 							target="_blank"
 							rel="noopener noreferrer"
-							href="https://gsoc2r.io/docs/organizations#files"
+							href="https://soc2.khulnasoft.com/docs/organizations#files"
 							style={{ textDecoration: "none", color: "#f85a3e" }}
 						>
 							Learn more

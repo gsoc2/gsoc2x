@@ -21,7 +21,7 @@ const SetAuthentication = (props) => {
   const [loadFail, setLoadFail] = useState("");
   const [appAuthentication, setAppAuthentication] = React.useState([]);
 
-  const isCloud = window.location.host === "localhost:3002" || window.location.host === "gsoc2r.io";
+  const isCloud = window.location.host === "localhost:3002" || window.location.host === "soc2.khulnasoft.com";
   const alert = useAlert();
 
   const parseIncomingOpenapiData = (data) => {
@@ -104,7 +104,7 @@ const SetAuthentication = (props) => {
 			setLoadFail(
 				<span>
 					<Typography variant="h4">
-						Failed to load the app. Please contact your provider or support@gsoc2r.io if this persists
+						Failed to load the app. Please contact your provider or support@soc2.khulnasoft.com if this persists
 					</Typography>
 					<Button 
 						variant="contained"

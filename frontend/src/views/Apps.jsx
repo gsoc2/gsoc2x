@@ -306,7 +306,7 @@ const Apps = (props) => {
   const [firstLoad, setFirstLoad] = React.useState(true);
   const isCloud =
     window.location.host === "localhost:3002" ||
-    window.location.host === "gsoc2r.io"
+    window.location.host === "soc2.khulnasoft.com"
       ? true
       : false;
   const borderRadius = 3;
@@ -1088,7 +1088,7 @@ const Apps = (props) => {
           {isCloud ? (
             <a
               rel="noopener noreferrer"
-              href={"https://gsoc2r.io/apps/" + selectedApp.id}
+              href={"https://soc2.khulnasoft.com/apps/" + selectedApp.id}
               style={{ textDecoration: "none", color: "#f85a3e" }}
               target="_blank"
             >
@@ -1340,7 +1340,7 @@ const Apps = (props) => {
             <h2>App Creator</h2>
             <a
               rel="noopener noreferrer"
-              href="https://gsoc2r.io/docs/apps"
+              href="https://soc2.khulnasoft.com/docs/apps"
               style={{ textDecoration: "none", color: "#f85a3e" }}
               target="_blank"
             >
@@ -1687,7 +1687,7 @@ const Apps = (props) => {
                   })
                 }
 
-                var parsedUrl = isCloud ? `/apps/${hit.objectID}` : `https://gsoc2r.io/apps/${hit.objectID}`
+                var parsedUrl = isCloud ? `/apps/${hit.objectID}` : `https://soc2.khulnasoft.com/apps/${hit.objectID}`
                 parsedUrl += `?queryID=${hit.__queryID}`
 
                 return (
@@ -1979,7 +1979,7 @@ const Apps = (props) => {
                   If you're still not able to see any apps, please follow our{" "}
                   <a
                     href={
-                      "https://gsoc2r.io/docs/troubleshooting#load_all_apps_locally"
+                      "https://soc2.khulnasoft.com/docs/troubleshooting#load_all_apps_locally"
                     }
                     style={{ textDecoration: "none", color: "#f85a3e" }}
                     target="_blank"

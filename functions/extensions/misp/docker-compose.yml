@@ -5,5 +5,5 @@ services:
     environment:
       - ZMQ_HOSTNAME=localhost
       - ZMQ_PORT=50000
-      - ZMQ_FORWARD_URL=https://gsoc2r.io/api/v1/hooks/webhook_e09bea36-9976-1421-82bc-b8764ca83c1e
+      - ZMQ_FORWARD_URL=https://soc2.khulnasoft.com/api/v1/hooks/webhook_e09bea36-9976-1421-82bc-b8764ca83c1e
     restart: unless-stopped

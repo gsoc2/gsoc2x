@@ -80,7 +80,7 @@ docker push ghcr.io/gsoc2/gsoc2-backend:1.1.0
 # This is supposed to be unavailable, and only be downloadable by customers 
 docker pull ghcr.io/gsoc2/gsoc2-worker-scale:latest
 docker save ghcr.io/gsoc2/gsoc2-worker-scale:latest -o gsoc2-worker.zip
-echo "1. Upload gsoc2-worker.zip to the gsoc2r.io public repo. If in Github Dev env, download the file, and upload manually."
+echo "1. Upload gsoc2-worker.zip to the soc2.khulnasoft.com public repo. If in Github Dev env, download the file, and upload manually."
 echo "2. Have customers download it with: $ wget URL"
 echo "3. Have customers use with with: docker load gsoc2-worker.zip"
 

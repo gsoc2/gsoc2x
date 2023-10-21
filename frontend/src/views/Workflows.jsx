@@ -645,7 +645,7 @@ const Workflows = (props) => {
 
   const isCloud =
     window.location.host === "localhost:3002" ||
-    window.location.host === "gsoc2r.io";
+    window.location.host === "soc2.khulnasoft.com";
 
   const findWorkflow = (filters) => {
 		console.log("Using filters: ", filters)
@@ -1511,7 +1511,7 @@ const Workflows = (props) => {
 					alert.success("Successfully published workflow");
 				} else {
 					alert.success(
-						"Successfully published workflow to https://gsoc2r.io"
+						"Successfully published workflow to https://soc2.khulnasoft.com"
 					);
 				}
 			}
@@ -3234,7 +3234,7 @@ const Workflows = (props) => {
                 <a
                   rel="noopener noreferrer"
                   target="_blank"
-                  href="https://gsoc2r.io/docs/workflows"
+                  href="https://soc2.khulnasoft.com/docs/workflows"
                   style={{ textDecoration: "none", color: "#f85a3e" }}
                 >
                   Learn more about Workflows

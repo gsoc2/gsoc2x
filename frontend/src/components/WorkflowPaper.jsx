@@ -52,7 +52,7 @@ const WorkflowPaper = (props) => {
 
   	const isCloud =
 			window.location.host === "localhost:3002" ||
-			window.location.host === "gsoc2r.io";
+			window.location.host === "soc2.khulnasoft.com";
 
 		//console.log("Workflow: ", data)
     var boxColor = "#86c142";
@@ -102,7 +102,7 @@ const WorkflowPaper = (props) => {
 		}
 
 		if (!isCloud) {
-			parsedUrl = `https://gsoc2r.io${parsedUrl}`
+			parsedUrl = `https://soc2.khulnasoft.com${parsedUrl}`
 		}
 
     return (

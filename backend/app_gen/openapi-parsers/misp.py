@@ -12,7 +12,7 @@ openapi = {
         "contact": {
             "name": "@gsoc2likeme",
             "url": "https://twitter.com/gsoc2likeme",
-            "email": "gsoc2@gsoc2r.io"
+            "email": "gsoc2@soc2.khulnasoft.com"
         }
     },
     "paths": {},

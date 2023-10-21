@@ -79,8 +79,8 @@ github.com/envoyproxy/go-control-plane v0.9.7/go.mod h1:cwu0lG7PUMfa9snN8LXBig5y
 github.com/envoyproxy/protoc-gen-validate v0.1.0/go.mod h1:iSmxcyjqTsJpI2R4NaDN7+kN2VEUnK/pcBlmesArF7c=
 github.com/gsoc2/go-elasticsearch/v8 v8.13.1 h1:GB+Wr0Yx8efG7D1jc9fGGiqjjRRngWJTcMSua3QIDaM=
 github.com/gsoc2/go-elasticsearch/v8 v8.13.1/go.mod h1:RPq0JXPQVVSFHTlPwj/go8BZ1hegRf+StaSpT2iGIoQ=
-github.com/gsoc2/kin-openapi v0.41.0 h1:oMmjo+ekGS971lb3KLeZZOqRDZOwWi3+g/OiSWP08+s=
-github.com/gsoc2/kin-openapi v0.41.0/go.mod h1:ev9OZAw7Bv5p0w93j91++6a1ElPzGcCofst+kmrWsj4=
+github.com/gsoc2/gsoc2-shared/kin-openapi v0.41.0 h1:oMmjo+ekGS971lb3KLeZZOqRDZOwWi3+g/OiSWP08+s=
+github.com/gsoc2/gsoc2-shared/kin-openapi v0.41.0/go.mod h1:ev9OZAw7Bv5p0w93j91++6a1ElPzGcCofst+kmrWsj4=
 github.com/ghodss/yaml v1.0.0 h1:wQHKEahhL6wmXdzwWG11gIVCkOv05bNOh+Rxn0yngAk=
 github.com/ghodss/yaml v1.0.0/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=
 github.com/go-gl/glfw v0.0.0-20190409004039-e6da0acd62b1/go.mod h1:vR7hzQXu2zJy9AVAgeJqvqgH9Q5CA+iKCZ2gyEVpxRU=

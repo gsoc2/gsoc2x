@@ -54,7 +54,7 @@ const SearchField = props => {
 		return null
 	}
 
-  const isCloud = window.location.host === "localhost:3002" || window.location.host === "gsoc2r.io";
+  const isCloud = window.location.host === "localhost:3002" || window.location.host === "soc2.khulnasoft.com";
 
 	if (window.location.pathname !== oldPath) {
 		setSearchOpen(false)
@@ -203,7 +203,7 @@ const SearchField = props => {
 							const appGroup = hit.action_references === undefined || hit.action_references === null ? [] : hit.action_references
 							const avatar = baseImage
 
-							var parsedUrl = isCloud ? `/workflows/${hit.objectID}` : `https://gsoc2r.io/workflows/${hit.objectID}`
+							var parsedUrl = isCloud ? `/workflows/${hit.objectID}` : `https://soc2.khulnasoft.com/workflows/${hit.objectID}`
 							parsedUrl += `?queryID=${hit.__queryID}`
 
 							// <a rel="noopener noreferrer" href="https://www.algolia.com/" target="_blank" style={{textDecoration: "none", color: "white"}}>
@@ -396,7 +396,7 @@ const SearchField = props => {
 								})
 							}
 
-							var parsedUrl = isCloud ? `/apps/${hit.objectID}` : `https://gsoc2r.io/apps/${hit.objectID}`
+							var parsedUrl = isCloud ? `/apps/${hit.objectID}` : `https://soc2.khulnasoft.com/apps/${hit.objectID}`
 							parsedUrl += `?queryID=${hit.__queryID}`
 
 							return (

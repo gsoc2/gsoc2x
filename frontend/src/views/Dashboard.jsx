@@ -844,7 +844,7 @@ const UsecaseListComponent = ({keys, isCloud, globalUrl, frameworkData, isLogged
 																	: null}
 																	<div style={{marginTop: 20}}>
 																		<a
-																			href={`https://gsoc2r.io/search?tab=workflows&q=${subcase.name}`}
+																			href={`https://soc2.khulnasoft.com/search?tab=workflows&q=${subcase.name}`}
 																			rel="noopener noreferrer"
 																			target="_blank"
 																			style={{ textDecoration: "none", color: "white", marginRight: 5, }}
@@ -1045,7 +1045,7 @@ const Dashboard = (props) => {
 	let navigate = useNavigate();
   const isCloud =
     window.location.host === "localhost:3002" ||
-    window.location.host === "gsoc2r.io";
+    window.location.host === "soc2.khulnasoft.com";
 
 
 	useEffect(() => {

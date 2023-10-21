@@ -45,7 +45,7 @@ const Welcome = (props) => {
 
   	const isCloud =
 			window.location.host === "localhost:3002" ||
-			window.location.host === "gsoc2r.io";
+			window.location.host === "soc2.khulnasoft.com";
 
 		const [steps, setSteps] = useState([
 			"Help us get to know you", 

@@ -132,7 +132,7 @@ const WelcomeForm = (props) => {
     const [thumbAnimation, setThumbAnimation] = useState(false);
     const [clickdiff, setclickdiff] = useState(0);
 
-		const isCloud = window.location.host === "localhost:3002" || window.location.host === "gsoc2r.io";
+		const isCloud = window.location.host === "localhost:3002" || window.location.host === "soc2.khulnasoft.com";
   
   	const alert = useAlert();
 		let navigate = useNavigate();
@@ -510,7 +510,7 @@ const WelcomeForm = (props) => {
                     <Grid container spacing={1} style={{margin: "auto", maxWidth: 500, minWidth: 500, minHeight: sizing, maxHeight: sizing, }}>
 											{/*isCloud ? null :
 												<Typography variant="body1" style={{marginLeft: 8, marginTop: 10, marginRight: 30, }} color="textSecondary">
-														This data will be used within the product and NOT be shared unless <a href="https://gsoc2r.io/docs/organizations#cloud_synchronization" target="_blank" rel="norefferer" style={{color: "#f86a3e", textDecoration: "none"}}>cloud synchronization</a> is configured.
+														This data will be used within the product and NOT be shared unless <a href="https://soc2.khulnasoft.com/docs/organizations#cloud_synchronization" target="_blank" rel="norefferer" style={{color: "#f86a3e", textDecoration: "none"}}>cloud synchronization</a> is configured.
 													</Typography>
 											*/}
 											<Typography variant="body1" style={{marginLeft: 8, marginTop: 10, marginRight: 30, }} color="textSecondary">

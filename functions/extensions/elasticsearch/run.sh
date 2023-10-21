@@ -6,7 +6,7 @@
 #echo "\nWaiting for 1.5 minute, then adding data"
 #sleep 90
 #echo "\nSlept 90 seconds: ADDING DATA"
-#curl -XPOST http://localhost:9200/_security/user/gsoc2 -H "Content-Type: application/json" -d '{"enabled": true, "email": "gsoc2@gsoc2r.io"}'
+#curl -XPOST http://localhost:9200/_security/user/gsoc2 -H "Content-Type: application/json" -d '{"enabled": true, "email": "gsoc2@soc2.khulnasoft.com"}'
 
 #curl -XPOST -u gsoc2:likeme http://localhost:9200/samples/_doc -H "Content-Type: application/json" -d '{"src": "122.14.137.67", "dst": "103.35.191.16", "message": "alert", "md5": "CAEF973033E593C625FB2AA34F7026DC", "sha256": "DB1AEC5222075800EDA75D7205267569679B424E5C58A28102417F46D3B5790D", "hits": 0}'
 #echo

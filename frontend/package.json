@@ -1,6 +1,6 @@
 {
-  "name": "gsoc2r",
-  "homepage": "https://gsoc2r.io",
+  "name": "gsoc2",
+  "homepage": "https://soc2.khulnasoft.com",
   "version": "1.2.0",
   "private": true,
   "dependencies": {
@@ -109,6 +109,6 @@
     "babel-eslint": "^10.1.0",
     "prettier": "2.4.1",
     "promise-window": "^1.2.1",
-    "webpack": "^4.44.2"
+    "webpack": "4.44.2"
   }
 }

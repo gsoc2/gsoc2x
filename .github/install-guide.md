@@ -1,7 +1,7 @@
 # Installation guide
-Installation of Gsoc2 is currently only available in docker. Looking for how to update Gsoc2? Check the [updating guide](https://gsoc2r.io/docs/configuration#updating_gsoc2)
+Installation of Gsoc2 is currently only available in docker. Looking for how to update Gsoc2? Check the [updating guide](https://soc2.khulnasoft.com/docs/configuration#updating_gsoc2)
 
-This document outlines a an introduction environment which is not scalable. [Read here](https://gsoc2r.io/docs/configuration#production_readiness) for information on production readiness. This also includes system requirements and configurations for Swarm or Kubernetes. 
+This document outlines a an introduction environment which is not scalable. [Read here](https://soc2.khulnasoft.com/docs/configuration#production_readiness) for information on production readiness. This also includes system requirements and configurations for Swarm or Kubernetes. 
 
 # Docker - *nix
 The Docker setup is done with docker-compose 
@@ -56,19 +56,19 @@ docker-compose up -d
 ```
 
 ### Configurations (proxies, default users etc.)
-https://gsoc2r.io/docs/configuration
+https://soc2.khulnasoft.com/docs/configuration
 
 ### After installation 
 1. After installation, go to http://localhost:3001 (or your servername - https is on port 3443)
 2. Now set up your admin account (username & password). Gsoc2 doesn't have a default username and password. 
-3. Sign in with the same Username & Password! Go to /apps and see if you have any apps yet. If not - you may need to [configure proxies](https://gsoc2r.io/docs/configuration#production_readiness)
-4. Check out https://gsoc2r.io/docs/configuration as it has a lot of useful information to get started
+3. Sign in with the same Username & Password! Go to /apps and see if you have any apps yet. If not - you may need to [configure proxies](https://soc2.khulnasoft.com/docs/configuration#production_readiness)
+4. Check out https://soc2.khulnasoft.com/docs/configuration as it has a lot of useful information to get started
 
 ![Admin account setup](https://github.com/Gsoc2/Gsoc2/blob/main/frontend/src/assets/img/gsoc2_adminaccount.png?raw=true)
 
 ### Useful info
-* Check out [getting started](https://gsoc2r.io/docs/getting_started)
-* The default state of Gsoc2 is NOT scalable. See [production setup](https://gsoc2r.io/docs/configuration#production_readiness) for more info
+* Check out [getting started](https://soc2.khulnasoft.com/docs/getting_started)
+* The default state of Gsoc2 is NOT scalable. See [production setup](https://soc2.khulnasoft.com/docs/configuration#production_readiness) for more info
 * The server is available on http://localhost:3001 (or your servername)
 * Further configurations can be done in docker-compose.yml and .env.
 * Default database location is in the same folder: ./gsoc2-database
@@ -131,4 +131,4 @@ export BASE_URL=http://YOUR-IP:5001
 export DOCKER_API_VERSION=1.40
 ```
 
-AND THAT's it - hopefully it worked. If it didn't please email [gsoc2@gsoc2r.io](mailto:gsoc2@gsoc2r.io)
+AND THAT's it - hopefully it worked. If it didn't please email [gsoc2@soc2.khulnasoft.com](mailto:gsoc2@soc2.khulnasoft.com)

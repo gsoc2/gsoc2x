@@ -37,14 +37,14 @@ import (
 	"cloud.google.com/go/storage"
 	"google.golang.org/appengine/mail"
 
-	"github.com/gsoc2/kin-openapi/openapi2"
-	"github.com/gsoc2/kin-openapi/openapi2conv"
-	"github.com/gsoc2/kin-openapi/openapi3"
+	"github.com/gsoc2/gsoc2-shared/kin-openapi/openapi2"
+	"github.com/gsoc2/gsoc2-shared/kin-openapi/openapi2conv"
+	"github.com/gsoc2/gsoc2-shared/kin-openapi/openapi3"
 
 	/*
-		"github.com/gsoc2/kin-openapi/openapi2"
-		"github.com/gsoc2/kin-openapi/openapi2conv"
-		"github.com/gsoc2/kin-openapi/openapi3"
+		"github.com/gsoc2/gsoc2-shared/kin-openapi/openapi2"
+		"github.com/gsoc2/gsoc2-shared/kin-openapi/openapi2conv"
+		"github.com/gsoc2/gsoc2-shared/kin-openapi/openapi3"
 	*/
 
 	"github.com/go-git/go-billy/v5"
@@ -76,15 +76,15 @@ import (
 
 // This is used to handle onprem vs offprem databases etc
 var gceProject = "gsoc2"
-var bucketName = "gsoc2r.appspot.com"
+var bucketName = "gsoc2.appspot.com"
 var baseAppPath = "/home/gsoc2/git/shaffuru/tmp/apps"
 
 var baseDockerName = "gsoc2/gsoc2"
 var registryName = "registry.hub.docker.com"
 var runningEnvironment = "onprem"
 
-var syncUrl = "https://gsoc2r.io"
-var syncSubUrl = "https://gsoc2r.io"
+var syncUrl = "https://soc2.khulnasoft.com"
+var syncSubUrl = "https://soc2.khulnasoft.com"
 
 var dbclient *datastore.Client
 
@@ -1262,9 +1262,9 @@ func handleContact(resp http.ResponseWriter, request *http.Request) {
 	log.Printf("Sending contact from %s", t.Email)
 
 	msg := &mail.Message{
-		Sender:  "Gsoc2 <gsoc2@gsoc2r.io>",
-		To:      []string{"gsoc2@gsoc2r.io"},
-		Subject: "Gsoc2r.io - New contact form",
+		Sender:  "Gsoc2 <gsoc2@soc2.khulnasoft.com>",
+		To:      []string{"gsoc2@soc2.khulnasoft.com"},
+		Subject: "soc2.khulnasoft.com - New contact form",
 		Body:    mailContent,
 	}
 
@@ -2281,7 +2281,7 @@ func executeCloudAction(action gsoc2.CloudSyncJob, apikey string) error {
 	}
 
 	if !responseData.Success {
-		return errors.New(fmt.Sprintf("Cloud error from Gsoc2r: %s", responseData.Reason))
+		return errors.New(fmt.Sprintf("Cloud error from Gsoc2: %s", responseData.Reason))
 	}
 
 	log.Printf("[INFO] Cloud action executed successfully for '%s'", action.Action)
@@ -5632,7 +5632,7 @@ func migrateDatabase(resp http.ResponseWriter, request *http.Request) {
 	log.Printf("\n\n[DEBUG] Successfully updated ran migration from Datastore to Opensearch!")
 	resp.WriteHeader(200)
 	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
-	log.Printf("[DEBUG] Panicing to force-restart Gsoc2 post-migration. Stop Gsoc2 and change database. Docs: https://gsoc2r.io/docs/configuration#database_migration")
+	log.Printf("[DEBUG] Panicing to force-restart Gsoc2 post-migration. Stop Gsoc2 and change database. Docs: https://soc2.khulnasoft.com/docs/configuration#database_migration")
 	os.Exit(0)
 }
 

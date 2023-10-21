@@ -41,7 +41,7 @@ const WorkflowSearch = props => {
 			"message": message,
 		}
 	
-		const errorMessage = "Something went wrong. Please contact gsoc2@gsoc2r.io directly."
+		const errorMessage = "Something went wrong. Please contact gsoc2@soc2.khulnasoft.com directly."
 
 		fetch(globalUrl+"/api/v1/contact", {
 			method: 'POST',

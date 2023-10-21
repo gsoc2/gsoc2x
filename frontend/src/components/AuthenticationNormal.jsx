@@ -210,7 +210,7 @@ const AuthenticationData = (props) => {
 				<a
 					target="_blank"
 					rel="noopener noreferrer"
-					href="https://gsoc2r.io/docs/apps#authentication"
+					href="https://soc2.khulnasoft.com/docs/apps#authentication"
 					style={{ textDecoration: "none", color: "#f85a3e" }}
 				>
 					What is app authentication?

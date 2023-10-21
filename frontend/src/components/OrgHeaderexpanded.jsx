@@ -541,7 +541,7 @@ const OrgHeaderexpanded = (props) => {
 					</Grid>
 					{isCloud ? 
 						<Typography variant="body2" style={{textAlign: "left",}} color="textSecondary">
-							IdP URL for Gsoc2: https://gsoc2r.io/api/v1/login_sso
+							IdP URL for Gsoc2: https://soc2.khulnasoft.com/api/v1/login_sso
 						</Typography>
 					: null}
 				</Grid>

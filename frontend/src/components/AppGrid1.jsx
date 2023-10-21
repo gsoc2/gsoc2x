@@ -30,7 +30,7 @@ const AppGrid1 = props => {
 
   const isCloud =
     window.location.host === "localhost:3000" ||
-    window.location.host === "gsoc2r.io";
+    window.location.host === "soc2.khulnasoft.com";
 
 	const rowHandler = maxRows === undefined || maxRows === null ? 50 : maxRows
 	const xs = parsedXs === undefined || parsedXs === null ? isMobile ? 6 : 2 : parsedXs
@@ -58,7 +58,7 @@ const AppGrid1 = props => {
 			"message": message,
 		}
 	
-		const errorMessage = "Something went wrong. Please contact gsoc2@gsoc2r.io directly."
+		const errorMessage = "Something went wrong. Please contact gsoc2@soc2.khulnasoft.com directly."
 
 		fetch(globalUrl+"/api/v1/contact", {
 			method: 'POST',

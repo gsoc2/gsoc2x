@@ -54,7 +54,7 @@ const Branding = (props) => {
 				<div>
 					<span>
 						<Typography variant="body1" color="textSecondary">
-							By changing publishing settings, you agree to our <a href="/docs/terms_of_service" target="_blank" style={{ textDecoration: "none", color: "#f86a3e"}}>Terms of Service</a>, and acknowledge that your organization's non-sensitive data will be turned into a <a target="_blank" style={{ textDecoration: "none", color: "#f86a3e"}} href="https://gsoc2r.io/creators">creator account</a>. Support: support@gsoc2r.io
+							By changing publishing settings, you agree to our <a href="/docs/terms_of_service" target="_blank" style={{ textDecoration: "none", color: "#f86a3e"}}>Terms of Service</a>, and acknowledge that your organization's non-sensitive data will be turned into a <a target="_blank" style={{ textDecoration: "none", color: "#f86a3e"}} href="https://soc2.khulnasoft.com/creators">creator account</a>. Support: support@soc2.khulnasoft.com
 
 						</Typography>
 						<Button

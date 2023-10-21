@@ -348,7 +348,7 @@ const UsecaseSearch = (props) => {
   const [selectedAction, setSelectedAction] = React.useState({});
   const [firstRequest, setFirstRequest] = React.useState(true);
 
-  const isCloud = window.location.host === "localhost:3002" || window.location.host === "gsoc2r.io";
+  const isCloud = window.location.host === "localhost:3002" || window.location.host === "soc2.khulnasoft.com";
   const alert = useAlert()
 
 	useEffect(() => {
@@ -911,7 +911,7 @@ const UsecaseSearch = (props) => {
 
 	const mergeWorkflowUsecases = (usecasedata) => {
 		// To properly handle multiple-locations 
-		const url = isCloud ? `${globalUrl}/api/v1/workflows/merge` : `https://gsoc2r.io/api/v1/workflows/merge`;
+		const url = isCloud ? `${globalUrl}/api/v1/workflows/merge` : `https://soc2.khulnasoft.com/api/v1/workflows/merge`;
 		fetch(url, {
 			mode: "cors",
 			method: "POST",
@@ -1452,7 +1452,7 @@ const UsecaseSearch = (props) => {
 									>
 										<span>
 											<a
-												href={`https://gsoc2r.io/docs/creators#${data.text.toLowerCase()}`}
+												href={`https://soc2.khulnasoft.com/docs/creators#${data.text.toLowerCase()}`}
 												rel="norefferer"
 												target="_blank"
 												style={{ textDecoration: "none",  }}

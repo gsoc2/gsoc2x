@@ -72,7 +72,7 @@ const Contact = (props) => {
 				if (response.success === true) {
 					setFormMessage(response.message)
 				} else {
-					setFormMessage("Something went wrong. Please contact gsoc2@gsoc2r.io.")
+					setFormMessage("Something went wrong. Please contact gsoc2@soc2.khulnasoft.com.")
 				}
 				console.log(response)
 			})

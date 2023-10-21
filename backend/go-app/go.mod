@@ -11,7 +11,6 @@ require (
 	github.com/basgys/goxml2json v1.1.0
 	github.com/carlescere/scheduler v0.0.0-20170109141437-ee74d2f83d82
 	github.com/docker/docker v24.0.2+incompatible
-	github.com/gsoc2/kin-openapi v0.42.0
 	github.com/fsouza/go-dockerclient v1.9.7
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-git/go-billy/v5 v5.4.1
@@ -19,7 +18,6 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/h2non/filetype v1.1.3
 	github.com/satori/go.uuid v1.2.0
-	github.com/gsoc2/gsoc2-shared v0.4.19
 	golang.org/x/crypto v0.14.0
 	google.golang.org/api v0.125.0
 	google.golang.org/appengine v1.6.7
