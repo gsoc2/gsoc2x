@@ -29,7 +29,7 @@ import (
 	uuid "github.com/satori/go.uuid"
 
 	newscheduler "github.com/carlescere/scheduler"
-	"github.com/gsoc2/gsoc2-shared/kin-openapi/openapi3"
+	"github.com/gsoc2/kin-openapi/openapi3"
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/go-git/go-git/v5"

@@ -37,14 +37,14 @@ import (
 	"cloud.google.com/go/storage"
 	"google.golang.org/appengine/mail"
 
-	"github.com/gsoc2/gsoc2-shared/kin-openapi/openapi2"
-	"github.com/gsoc2/gsoc2-shared/kin-openapi/openapi2conv"
-	"github.com/gsoc2/gsoc2-shared/kin-openapi/openapi3"
+	"github.com/gsoc2/kin-openapi/openapi2"
+	"github.com/gsoc2/kin-openapi/openapi2conv"
+	"github.com/gsoc2/kin-openapi/openapi3"
 
 	/*
-		"github.com/gsoc2/gsoc2-shared/kin-openapi/openapi2"
-		"github.com/gsoc2/gsoc2-shared/kin-openapi/openapi2conv"
-		"github.com/gsoc2/gsoc2-shared/kin-openapi/openapi3"
+		"github.com/gsoc2/kin-openapi/openapi2"
+		"github.com/gsoc2/kin-openapi/openapi2conv"
+		"github.com/gsoc2/kin-openapi/openapi3"
 	*/
 
 	"github.com/go-git/go-billy/v5"
