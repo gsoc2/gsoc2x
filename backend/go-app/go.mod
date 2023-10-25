@@ -23,7 +23,7 @@ require (
 	golang.org/x/crypto v0.14.0
 	google.golang.org/api v0.128.0
 	google.golang.org/appengine v1.6.7
-	google.golang.org/grpc v1.57.0
+	google.golang.org/grpc v1.57.1
 	gopkg.in/src-d/go-git.v4 v4.13.1
 	gopkg.in/yaml.v3 v3.0.1
 )
