@@ -57,12 +57,21 @@ jobs:
         with:
           platforms: "amd64,arm64,arm"
 
-      - name: Login to Ghcr
-        uses: docker/login-action@v3
+      - name: Log into registry ${{ env.REGISTRY }}
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
         with:
-          registry: ghcr.io
+          registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Extract metadata (tags, labels) for Docker
+      # https://github.com/docker/metadata-action
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@96383f45573cb7f253c731d3b3ab81c87ef81934 # v5.0.0
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
       - name: Ghcr Build and push
         id: docker_build
@@ -80,11 +89,6 @@ jobs:
           tags: |
             ghcr.io/gsoc2/gsoc2-${{ matrix.app }}:${{ matrix.version }}
             ghcr.io/gsoc2/gsoc2-${{ matrix.app }}:latest
-            ${{ github.actor }}/gsoc2-${{ matrix.app }}:${{ matrix.version }}
-            ${{ github.actor }}/gsoc2-${{ matrix.app }}:latest
-            gsoc2/gsoc2-${{ matrix.app }}:${{ matrix.version }}
-            gsoc2/gsoc2-${{ matrix.app }}:latest
-            gsoc2/gsoc2:${{ matrix.app }}
 
       - name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}
