@@ -878,7 +878,7 @@ func initializeImages() {
 	}
 
 	if baseimageregistry == "" {
-		baseimageregistry = "docker.io" // Dockerhub
+		baseimageregistry = "ghcr.io" // Dockerhub
 		baseimageregistry = "ghcr.io"   // Github
 		log.Printf("[DEBUG] Setting baseimageregistry")
 	}
