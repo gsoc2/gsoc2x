@@ -14,6 +14,6 @@ docker run \
 	--env ENVIRONMENT_NAME="Another env" \
 	--env ORG="2e7b6a08-b63b-4fc2-bd70-718091509db1" \
 	--env AUTH="env auth" \
-	--env BASE_URL="https://soc2.khulnasoft.com" \
+	--env BASE_URL="https://gsoc2r.io" \
 	-v /var/run/docker.sock:/var/run/docker.sock \
 	ghcr.io/gsoc2/gsoc2-orborus:nightly

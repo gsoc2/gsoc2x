@@ -11,9 +11,6 @@ import (
 	"crypto/md5"
 	"strconv"
 
-	//"crypto/tls"
-	//"crypto/x509"
-	//"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -27,35 +24,21 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	//"regexp"
+	// import httptest
+	"net/http/httptest"
+
 	"strings"
 	"time"
 
-	// Google cloud
-	"cloud.google.com/go/datastore"
-	"cloud.google.com/go/pubsub"
-	"cloud.google.com/go/storage"
-	"google.golang.org/appengine/mail"
-
-	"github.com/gsoc2/kin-openapi/openapi2"
-	"github.com/gsoc2/kin-openapi/openapi2conv"
-	"github.com/gsoc2/kin-openapi/openapi3"
-
-	/*
-		"github.com/gsoc2/kin-openapi/openapi2"
-		"github.com/gsoc2/kin-openapi/openapi2conv"
-		"github.com/gsoc2/kin-openapi/openapi3"
-	*/
+	"github.com/frikky/kin-openapi/openapi2"
+	"github.com/frikky/kin-openapi/openapi2conv"
+	"github.com/frikky/kin-openapi/openapi3"
 
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/storage/memory"
-
-	//cv "github.com/nirasan/go-oauth-pkce-code-verifier"
-
-	//githttp "gopkg.in/src-d/go-git.v4/plumbing/transport/http"
 
 	// Random
 	xj "github.com/basgys/goxml2json"
@@ -69,76 +52,19 @@ import (
 
 	// Web
 	"github.com/gorilla/mux"
-	"google.golang.org/api/option"
-	"google.golang.org/grpc"
 	http2 "gopkg.in/src-d/go-git.v4/plumbing/transport/http"
 )
 
 // This is used to handle onprem vs offprem databases etc
 var gceProject = "gsoc2"
-var bucketName = "gsoc2.appspot.com"
+var bucketName = "gsoc2r.appspot.com"
 var baseAppPath = "/home/gsoc2/git/shaffuru/tmp/apps"
 
 var baseDockerName = "gsoc2/gsoc2"
 var registryName = "registry.hub.docker.com"
 var runningEnvironment = "onprem"
 
-var syncUrl = "https://soc2.khulnasoft.com"
-var syncSubUrl = "https://soc2.khulnasoft.com"
-
-var dbclient *datastore.Client
-
-type Userapi struct {
-	Username string `datastore:"username"`
-	ApiKey   string `datastore:"apikey"`
-}
-
-type ExecutionInfo struct {
-	TotalApiUsage           int64 `json:"total_api_usage" datastore:"total_api_usage"`
-	TotalWorkflowExecutions int64 `json:"total_workflow_executions" datastore:"total_workflow_executions"`
-	TotalAppExecutions      int64 `json:"total_app_executions" datastore:"total_app_executions"`
-	TotalCloudExecutions    int64 `json:"total_cloud_executions" datastore:"total_cloud_executions"`
-	TotalOnpremExecutions   int64 `json:"total_onprem_executions" datastore:"total_onprem_executions"`
-	DailyApiUsage           int64 `json:"daily_api_usage" datastore:"daily_api_usage"`
-	DailyWorkflowExecutions int64 `json:"daily_workflow_executions" datastore:"daily_workflow_executions"`
-	DailyAppExecutions      int64 `json:"daily_app_executions" datastore:"daily_app_executions"`
-	DailyCloudExecutions    int64 `json:"daily_cloud_executions" datastore:"daily_cloud_executions"`
-	DailyOnpremExecutions   int64 `json:"daily_onprem_executions" datastore:"daily_onprem_executions"`
-}
-
-// "Execution by status"
-// Execution history
-//type GlobalStatistics struct {
-//	BackendExecutions     int64            `json:"backend_executions" datastore:"backend_executions"`
-//	WorkflowCount         int64            `json:"workflow_count" datastore:"workflow_count"`
-//	ExecutionCount        int64            `json:"execution_count" datastore:"execution_count"`
-//	ExecutionSuccessCount int64            `json:"execution_success_count" datastore:"execution_success_count"`
-//	ExecutionAbortCount   int64            `json:"execution_abort_count" datastore:"execution_abort_count"`
-//	ExecutionFailureCount int64            `json:"execution_failure_count" datastore:"execution_failure_count"`
-//	ExecutionPendingCount int64            `json:"execution_pending_count" datastore:"execution_pending_count"`
-//	AppUsageCount         int64            `json:"app_usage_count" datastore:"app_usage_count"`
-//	TotalAppsCount        int64            `json:"total_apps_count" datastore:"total_apps_count"`
-//	SelfMadeAppCount      int64            `json:"self_made_app_count" datastore:"self_made_app_count"`
-//	WebhookUsageCount     int64            `json:"webhook_usage_count" datastore:"webhook_usage_count"`
-//	Baseline              map[string]int64 `json:"baseline" datastore:"baseline"`
-//}
-
-type ParsedOpenApi struct {
-	Body    string `datastore:"body,noindex" json:"body"`
-	ID      string `datastore:"id" json:"id"`
-	Success bool   `datastore:"success,omitempty" json:"success,omitempty"`
-}
-
-// Limits set for a user so that they can't do a shitload
-type UserLimits struct {
-	DailyApiUsage           int64 `json:"daily_api_usage" datastore:"daily_api_usage"`
-	DailyWorkflowExecutions int64 `json:"daily_workflow_executions" datastore:"daily_workflow_executions"`
-	DailyCloudExecutions    int64 `json:"daily_cloud_executions" datastore:"daily_cloud_executions"`
-	DailyTriggers           int64 `json:"daily_triggers" datastore:"daily_triggers"`
-	DailyMailUsage          int64 `json:"daily_mail_usage" datastore:"daily_mail_usage"`
-	MaxTriggers             int64 `json:"max_triggers" datastore:"max_triggers"`
-	MaxWorkflows            int64 `json:"max_workflows" datastore:"max_workflows"`
-}
+var syncUrl = "https://gsoc2r.io"
 
 type retStruct struct {
 	Success         bool                 `json:"success"`
@@ -146,43 +72,6 @@ type retStruct struct {
 	SessionKey      string               `json:"session_key"`
 	IntervalSeconds int64                `json:"interval_seconds"`
 	Reason          string               `json:"reason"`
-}
-
-// Saves some data, not sure what to have here lol
-type UserAuth struct {
-	Description string          `json:"description" datastore:"description,noindex" yaml:"description"`
-	Name        string          `json:"name" datastore:"name" yaml:"name"`
-	Workflows   []string        `json:"workflows" datastore:"workflows"`
-	Username    string          `json:"username" datastore:"username"`
-	Fields      []UserAuthField `json:"fields" datastore:"fields"`
-}
-
-type UserAuthField struct {
-	Key   string `json:"key" datastore:"key"`
-	Value string `json:"value" datastore:"value,noindex"`
-}
-
-// Not environment, but execution environment
-//type Environment struct {
-//	Name       string `datastore:"name"`
-//	Type       string `datastore:"type"`
-//	Registered bool   `datastore:"registered"`
-//	Default    bool   `datastore:"default" json:"default"`
-//	Archived   bool   `datastore:"archived" json:"archived"`
-//	Id         string `datastore:"id" json:"id"`
-//	OrgId      string `datastore:"org_id" json:"org_id"`
-//}
-
-// timeout maybe? idk
-type session struct {
-	Username string `datastore:"Username,noindex"`
-	Id       string `datastore:"Id,noindex"`
-	Session  string `datastore:"session,noindex"`
-}
-
-type loginStruct struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
 }
 
 type Contact struct {
@@ -374,64 +263,6 @@ type Hook struct {
 	Environment string       `json:"environment" datastore:"environment"`
 }
 
-func createFileFromFile(ctx context.Context, bucket *storage.BucketHandle, remotePath, localPath string) error {
-	// [START upload_file]
-	f, err := os.Open(localPath)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	wc := bucket.Object(remotePath).NewWriter(ctx)
-	if _, err = io.Copy(wc, f); err != nil {
-		return err
-	}
-	if err := wc.Close(); err != nil {
-		return err
-	}
-	// [END upload_file]
-	return nil
-}
-
-func createFileFromBytes(ctx context.Context, bucket *storage.BucketHandle, remotePath string, data []byte) error {
-	wc := bucket.Object(remotePath).NewWriter(ctx)
-
-	byteReader := bytes.NewReader(data)
-	if _, err := io.Copy(wc, byteReader); err != nil {
-		return err
-	}
-
-	if err := wc.Close(); err != nil {
-		return err
-	}
-
-	// [END upload_file]
-	return nil
-}
-
-func readFile(ctx context.Context, bucket *storage.BucketHandle, object string) ([]byte, error) {
-	// [START download_file]
-	rc, err := bucket.Object(object).NewReader(ctx)
-	if err != nil {
-		return nil, err
-	}
-	defer rc.Close()
-
-	data, err := ioutil.ReadAll(rc)
-	if err != nil {
-		return nil, err
-	}
-	return data, nil
-	// [END download_file]
-}
-
-func IndexHandler(entrypoint string) func(w http.ResponseWriter, r *http.Request) {
-	fn := func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, entrypoint)
-	}
-
-	return http.HandlerFunc(fn)
-}
 
 func GetUsersHandler(w http.ResponseWriter, r *http.Request) {
 	data := map[string]interface{}{
@@ -478,29 +309,6 @@ func authenticate(request *http.Request) bool {
 	}
 
 	return false
-}
-
-func publishPubsub(ctx context.Context, topic string, data []byte, attributes map[string]string) error {
-	client, err := pubsub.NewClient(ctx, gceProject)
-	if err != nil {
-		return err
-	}
-
-	t := client.Topic(topic)
-	result := t.Publish(ctx, &pubsub.Message{
-		Data:       data,
-		Attributes: attributes,
-	})
-	// Block until the result is returned and a server-generated
-	// ID is returned for the published message.
-	id, err := result.Get(ctx)
-	if err != nil {
-		return err
-	}
-
-	log.Printf("Published message for topic %s; msg ID: %v\n", topic, id)
-
-	return nil
 }
 
 func checkError(cmdName string, cmdArgs []string) error {
@@ -710,10 +518,6 @@ func createNewUser(username, password, role, apikey string, org gsoc2.OrgMini) e
 		}
 	}
 
-	//err = increaseStatisticsField(ctx, "successful_register", username, 1, org.Id)
-	//if err != nil {
-	//	log.Printf("Failed to increase total apps loaded stats: %s", err)
-	//}
 
 	return nil
 }
@@ -1064,7 +868,6 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 		}
 
 		org, err := gsoc2.GetOrg(ctx, item)
-		_ = err
 		if len(org.Id) > 0 {
 			userOrgs = append(userOrgs, gsoc2.OrgMini{
 				Id:         org.Id,
@@ -1073,7 +876,7 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 				Image:      org.Image,
 			})
 		} else {
-			log.Printf("[WARNING] Failed to get org %s for user %s", item, userInfo.Username)
+			log.Printf("[WARNING] Failed to get org %s (%s) for user %s. Error: %#v", org.Name, item, userInfo.Username, err)
 		}
 	}
 
@@ -1103,7 +906,7 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 	userOrgs = gsoc2.SortOrgList(userOrgs)
 	orgPriorities := org.Priorities
 	if len(org.Priorities) < 10 {
-		log.Printf("[WARNING] Should find and add priorities as length is less than 10 for org %s", userInfo.ActiveOrg.Id)
+		//log.Printf("[WARNING] Should find and add priorities as length is less than 10 for org %s", userInfo.ActiveOrg.Id)
 		newPriorities, err := gsoc2.GetPriorities(ctx, userInfo, org)
 		if err != nil {
 			log.Printf("[WARNING] Failed getting new priorities for org %s: %s", org.Id, err)
@@ -1171,110 +974,6 @@ type passwordReset struct {
 	Reference string `json:"reference"`
 }
 
-// This might be... a bit off, but that's fine :)
-// This might also be stupid, as we want timelines and such
-// Anyway, these are super basic stupid stats.
-func increaseStatisticsField(ctx context.Context, fieldname, id string, amount int64, orgId string) error {
-
-	// 1. Get current stats
-	// 2. Increase field(s)
-	// 3. Put new stats
-	statisticsId := "global_statistics"
-	nameKey := fieldname
-	key := datastore.NameKey(statisticsId, nameKey, nil)
-
-	statisticsItem := gsoc2.StatisticsItem{}
-	newData := gsoc2.StatisticsData{
-		Timestamp: int64(time.Now().Unix()),
-		Amount:    amount,
-		Id:        id,
-	}
-
-	if err := dbclient.Get(ctx, key, &statisticsItem); err != nil {
-		// Should init
-		if strings.Contains(fmt.Sprintf("%s", err), "entity") {
-			statisticsItem = gsoc2.StatisticsItem{
-				Total:     amount,
-				OrgId:     orgId,
-				Fieldname: fieldname,
-				Data: []gsoc2.StatisticsData{
-					newData,
-				},
-			}
-
-			if _, err := dbclient.Put(ctx, key, &statisticsItem); err != nil {
-				log.Printf("Error setting base stats: %s", err)
-				return err
-			}
-
-			return nil
-		}
-		//log.Printf("STATSERR: %s", err)
-
-		return err
-	}
-
-	statisticsItem.Total += amount
-	statisticsItem.Data = append(statisticsItem.Data, newData)
-
-	// New struct, to not add body, author etc
-	// FIXME - reintroduce
-	//if _, err := dbclient.Put(ctx, key, &statisticsItem); err != nil {
-	//	log.Printf("Error stats to %s: %s", fieldname, err)
-	//	return err
-	//}
-
-	//log.Printf("Stats: %#v", statisticsItem)
-
-	return nil
-}
-
-// FIXME - forward this to emails or whatever CRM system in use
-func handleContact(resp http.ResponseWriter, request *http.Request) {
-	cors := gsoc2.HandleCors(resp, request)
-	if cors {
-		return
-	}
-
-	body, err := ioutil.ReadAll(request.Body)
-	if err != nil {
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
-		return
-	}
-
-	var t Contact
-	err = json.Unmarshal(body, &t)
-	if err != nil {
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
-		return
-	}
-
-	if len(t.Email) < 3 || len(t.Message) == 0 {
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Please fill a valid email and message"}`)))
-		return
-	}
-
-	ctx := context.Background()
-	mailContent := fmt.Sprintf("Firsname: %s\nLastname: %s\nTitle: %s\nCompanyname: %s\nPhone: %s\nEmail: %s\nMessage: %s", t.Firstname, t.Lastname, t.Title, t.Companyname, t.Phone, t.Email, t.Message)
-	log.Printf("Sending contact from %s", t.Email)
-
-	msg := &mail.Message{
-		Sender:  "Gsoc2 <gsoc2@soc2.khulnasoft.com>",
-		To:      []string{"gsoc2@soc2.khulnasoft.com"},
-		Subject: "soc2.khulnasoft.com - New contact form",
-		Body:    mailContent,
-	}
-
-	if err := mail.Send(ctx, msg); err != nil {
-		log.Printf("Couldn't send email: %v", err)
-	}
-
-	resp.WriteHeader(200)
-	resp.Write([]byte(fmt.Sprintf(`{"success": true, "message": "Thanks for reaching out. We will contact you soon!"}`)))
-}
 
 func checkAdminLogin(resp http.ResponseWriter, request *http.Request) {
 	cors := gsoc2.HandleCors(resp, request)
@@ -2263,6 +1962,7 @@ func executeCloudAction(action gsoc2.CloudSyncJob, apikey string) error {
 		return err
 	}
 
+	defer newresp.Body.Close()
 	respBody, err := ioutil.ReadAll(newresp.Body)
 	if err != nil {
 		return err
@@ -2281,7 +1981,7 @@ func executeCloudAction(action gsoc2.CloudSyncJob, apikey string) error {
 	}
 
 	if !responseData.Success {
-		return errors.New(fmt.Sprintf("Cloud error from Gsoc2: %s", responseData.Reason))
+		return errors.New(fmt.Sprintf("Cloud error from Gsoc2r: %s", responseData.Reason))
 	}
 
 	log.Printf("[INFO] Cloud action executed successfully for '%s'", action.Action)
@@ -3067,8 +2767,8 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user gsoc2.User, ski
 		// FIXME: Check whether it's in use.
 		if user.Id != app.Owner && user.Role != "admin" {
 			log.Printf("[WARNING] Wrong user (%s) for app %s when verifying swagger", user.Username, app.Name)
-			resp.WriteHeader(400)
-			resp.Write([]byte(`{"success": false}`))
+			resp.WriteHeader(403)
+			resp.Write([]byte(`{"success": false, "reason": "You don't have permissions to edit this app. Contact support@gsoc2r.io if this persists."}`))
 			return
 		}
 
@@ -3500,6 +3200,7 @@ func handleCloudExecutionOnprem(workflowId, startNode, executionSource, executio
 }
 
 func handleCloudJob(job gsoc2.CloudSyncJob) error {
+	ctx := context.Background()
 	// May need authentication in all of these..?
 	log.Printf("[INFO] Handle job with type %s and action %s", job.Type, job.Action)
 	gsoc2.IncrementCache(ctx, job.OrgId, "org_sync_actions")
@@ -3750,13 +3451,63 @@ func remoteOrgJobController(org gsoc2.Org, body []byte) error {
 	return nil
 }
 
+
 func remoteOrgJobHandler(org gsoc2.Org, interval int) error {
+
+	// Check if it's 1 in 10 (10% chance random)
+	backupJob := gsoc2.BackupJob{} 
+
+	// Check if workflow backup is active
+	// Check if app backup is active
+	ctx := context.Background()
+
+	foundUser := org.Users[0]
+	for _, user := range org.Users {
+		if user.Role == "admin" {
+			foundUser = user
+			break
+		}
+	}
+
+	if org.SyncConfig.WorkflowBackup {
+		workflows, err := gsoc2.GetAllWorkflowsByQuery(ctx, foundUser)
+		if err != nil {
+			log.Printf("[ERROR] Failed getting backup workflows for org %s: %s", org.Id, err)
+		} else {
+			backupJob.Workflows = workflows
+		}
+	}
+
+	if org.SyncConfig.AppBackup && len(org.Users) > 0 {
+
+		apps, err := gsoc2.GetPrioritizedApps(ctx, foundUser)
+		if err != nil {
+			log.Printf("[ERROR] Failed getting backup apps for org %s: %s", org.Id, err)
+		} else {
+			backupJob.Apps = apps
+		}
+	}
+
+	info, err := gsoc2.GetOrgStatistics(ctx, org.Id)
+	if err != nil {
+		log.Printf("[ERROR] Failed getting org statistics backup for org %s: %s", org.Id, err)
+	} else {
+		backupJob.Stats = *info
+	}
+
+	backupJobData, err := json.Marshal(backupJob)
+	if err != nil {
+		log.Printf("[ERROR] Failed marshalling backup job: %s", err)
+		backupJobData = []byte{}
+	}
+
+
 	client := &http.Client{}
 	syncUrl := fmt.Sprintf("%s/api/v1/cloud/sync", syncUrl)
 	req, err := http.NewRequest(
-		"GET",
+		"POST",
 		syncUrl,
-		nil,
+		bytes.NewBuffer(backupJobData),
 	)
 
 	req.Header.Add("Authorization", fmt.Sprintf(`Bearer %s`, org.SyncConfig.Apikey))
@@ -3766,6 +3517,7 @@ func remoteOrgJobHandler(org gsoc2.Org, interval int) error {
 		return err
 	}
 
+	defer newresp.Body.Close()
 	respBody, err := ioutil.ReadAll(newresp.Body)
 	if err != nil {
 		log.Printf("[ERROR] Failed body read in job sync: %s", err)
@@ -3775,7 +3527,7 @@ func remoteOrgJobHandler(org gsoc2.Org, interval int) error {
 	//log.Printf("Remote Data: %s", respBody)
 	err = remoteOrgJobController(org, respBody)
 	if err != nil {
-		log.Printf("[ERROR] Failed job controller run for %s: %s", respBody, err)
+		//log.Printf("[ERROR] Failed cloud sync job controller run for '%s': %s", respBody, err)
 		return err
 	}
 	return nil
@@ -3818,8 +3570,14 @@ func runInitEs(ctx context.Context) {
 	log.Printf("[DEBUG] Getting organizations for Elasticsearch/Opensearch")
 	activeOrgs, err := gsoc2.GetAllOrgs(ctx)
 
+	log.Printf("[DEBUG] Got %d organizations to look into. If this is 0, we wait 10 more seconds until DB is ready and try again.", len(activeOrgs))
+	if len(activeOrgs) == 0 {
+		time.Sleep(10 * time.Second)
+		activeOrgs, err = gsoc2.GetAllOrgs(ctx)
+	}
+
 	setUsers := false
-	//log.Printf("ORGS: %d", len(activeOrgs))
+	_ = setUsers
 	if err != nil {
 		if fmt.Sprintf("%s", err) == "EOF" {
 			time.Sleep(7 * time.Second)
@@ -3874,7 +3632,7 @@ func runInitEs(ctx context.Context) {
 
 			if len(activeOrgs) == 1 {
 				if len(activeOrgs[0].Users) == 0 {
-					log.Printf("ORG doesn't have any users??")
+					log.Printf("[ERROR] Main Org doesn't have any user. Creating.")
 
 					users, err := gsoc2.GetAllUsers(ctx)
 					if err != nil && len(users) == 0 {
@@ -3899,7 +3657,6 @@ func runInitEs(ctx context.Context) {
 							log.Printf("Successfully updated org to have users!")
 						}
 					}
-
 				}
 			}
 		}
@@ -3907,10 +3664,9 @@ func runInitEs(ctx context.Context) {
 
 	if strings.Contains(os.Getenv("GSOC2_OPENSEARCH_URL"), "https") {
 		log.Printf("[INFO] Waiting during init to make sure the opensearch instance is up and running with security features properly")
-		time.Sleep(30 * time.Second)
+		time.Sleep(15 * time.Second)
 	}
 
-	_ = setUsers
 	schedules, err := gsoc2.GetAllSchedules(ctx, "ALL")
 	if err != nil {
 		log.Printf("[WARNING] Failed getting schedules during service init: %s", err)
@@ -3933,6 +3689,10 @@ func runInitEs(ctx context.Context) {
 					orgId = activeOrgs[0].Id
 				}
 
+				if len(schedule.Org) == 36 {
+					orgId = schedule.Org
+				}
+
 				_, _, err := handleExecution(schedule.WorkflowId, gsoc2.Workflow{}, request, orgId)
 				if err != nil {
 					log.Printf("[WARNING] Failed to execute %s: %s", schedule.WorkflowId, err)
@@ -3942,15 +3702,21 @@ func runInitEs(ctx context.Context) {
 
 		for _, schedule := range schedules {
 			if strings.ToLower(schedule.Environment) == "cloud" {
-				log.Printf("Skipping cloud schedule")
+				log.Printf("[DEBUG] Skipping cloud schedule")
 				continue
 			}
+
+			// FIXME: Add a randomized timer to avoid all schedules running at the same time
+			// Many are at 5 minutes / 1 hour. The point is to spread these out 
+			// a bit instead of all of them starting at the exact same time
 
 			//log.Printf("Schedule: %#v", schedule)
 			//log.Printf("Schedule time: every %d seconds", schedule.Seconds)
 			jobret, err := newscheduler.Every(schedule.Seconds).Seconds().NotImmediately().Run(job(schedule))
 			if err != nil {
-				log.Printf("Failed to schedule workflow: %s", err)
+				log.Printf("[ERROR] Failed to start schedule for workflow %s: %s", schedule.WorkflowId, err)
+			} else {
+				log.Printf("[DEBUG] Successfully started schedule for workflow %s", schedule.WorkflowId)
 			}
 
 			scheduledJobs[schedule.Id] = jobret
@@ -4054,17 +3820,17 @@ func runInitEs(ctx context.Context) {
 			continue
 		}
 
-		log.Printf("[DEBUG] Should start schedule for org %s (%s)", org.Name, org.Id)
+		log.Printf("[DEBUG] Should start cloud schedule for org %s (%s)", org.Name, org.Id)
 		job := func() {
 			err := remoteOrgJobHandler(org, interval)
 			if err != nil {
-				log.Printf("[ERROR] Failed request with remote org setup (2): %s", err)
+				log.Printf("[ERROR] Failed request with remote org sync for org %s (2): %s", org.Id, err)
 			}
 		}
 
 		jobret, err := newscheduler.Every(int(interval)).Seconds().NotImmediately().Run(job)
 		if err != nil {
-			log.Printf("[CRITICAL] Failed to schedule org: %s", err)
+			log.Printf("[ERROR] Failed to schedule org: %s", err)
 		} else {
 			log.Printf("[INFO] Started sync on interval %d for org %s (%s)", interval, org.Name, org.Id)
 			scheduledOrgs[org.Id] = jobret
@@ -4186,8 +3952,8 @@ func runInitEs(ctx context.Context) {
 
 	if err != nil && len(workflowapps) == 0 {
 		log.Printf("[WARNING] Failed getting apps (runInit): %s", err)
-	} else if err == nil {
-		log.Printf("[DEBUG] Downloading default apps")
+	} else if err == nil && len(workflowapps) < 10 {
+		log.Printf("[DEBUG] Downloading default apps as %d were found", len(workflowapps))
 		fs := memfs.New()
 		storer := memory.NewStorage()
 
@@ -4222,7 +3988,7 @@ func runInitEs(ctx context.Context) {
 
 		r, err := git.Clone(storer, fs, cloneOptions)
 		if err != nil {
-			log.Printf("[WARNING] Failed loading repo into memory (init): %s", err)
+			log.Printf("[ERROR] Failed loading repo into memory (init): %s", err)
 		}
 
 		dir, err := fs.ReadDir("")
@@ -4243,6 +4009,8 @@ func runInitEs(ctx context.Context) {
 		if len(location) != 0 {
 			handleAppHotload(ctx, location, false)
 		}
+	} else {
+		log.Printf("[DEBUG] Skipping download of default apps as %d were found", len(workflowapps))
 	}
 
 	log.Printf("[INFO] Downloading OpenAPI data for search - EXTRA APPS")
@@ -4257,8 +4025,8 @@ func runInitEs(ctx context.Context) {
 	}
 	_, err = git.Clone(storer, fs, cloneOptions)
 	if err != nil {
-		log.Printf("[WARNING] Failed loading repo %s into memory: %s", apis, err)
-	} else {
+		log.Printf("[ERROR] Failed loading repo %s into memory: %s", apis, err)
+	} else if err == nil && len(workflowapps) < 10 {
 		log.Printf("[INFO] Finished git clone. Looking for updates to the repo.")
 		dir, err := fs.ReadDir("")
 		if err != nil {
@@ -4267,699 +4035,39 @@ func runInitEs(ctx context.Context) {
 
 		iterateOpenApiGithub(fs, dir, "", "")
 		log.Printf("[INFO] Finished downloading extra API samples")
+	} else {
+		log.Printf("[INFO] Skipping download of extra API samples as %d were found", len(workflowapps))
+	}
+
+	
+	if os.Getenv("GSOC2_HEALTHCHECK_DISABLED") != "true" {
+		healthcheckInterval := 30 
+		log.Printf("[INFO] Starting healthcheck job every %d minute. Stats available on /api/v1/health/stats. Disable with GSOC2_HEALTHCHECK_DISABLED=true", healthcheckInterval)
+		job := func() {
+			// Prepare a fake http.responsewriter 
+			resp := httptest.NewRecorder()
+
+			request := http.Request{}
+			// Add the "force=true" query to the fake request
+			request.URL, err  = url.Parse("/api/v1/health/stats?force=true")
+			if err != nil {
+				log.Printf("[ERROR] Failed to parse test url for healthstats: %s", err)
+			}
+
+			gsoc2.RunOpsHealthCheck(resp, &request)
+		}
+
+		_, err := newscheduler.Every(int(healthcheckInterval)).Minutes().Run(job)
+		if err != nil {
+			log.Printf("[ERROR] Failed to schedule healthcheck: %s", err)
+		} else {
+			log.Printf("[DEBUG] Successfully started healthcheck interval of %d minutes", healthcheckInterval)
+		}
 	}
 
 	log.Printf("[INFO] Finished INIT (ES)")
 }
 
-// Handles configuration items during Gsoc2 startup
-func runInit(ctx context.Context) {
-	// Setting stats for backend starts (failure count as well)
-	//err := increaseStatisticsField(ctx, "backend_executions", "", 1, "")
-	//if err != nil {
-	//	log.Printf("Failed increasing local stats: %s", err)
-	//}
-	//log.Printf("[DEBUG] Finalized init statistics update")
-
-	log.Printf("[DEBUG] Starting INIT setup (NOT Opensearch/Elasticsearch!)")
-	httpProxy := os.Getenv("HTTP_PROXY")
-	if len(httpProxy) > 0 {
-		log.Printf("Running with HTTP proxy %s (env: HTTP_PROXY)", httpProxy)
-	}
-	httpsProxy := os.Getenv("HTTPS_PROXY")
-	if len(httpsProxy) > 0 {
-		log.Printf("Running with HTTPS proxy %s (env: HTTPS_PROXY)", httpsProxy)
-	}
-
-	//requestCache = cache.New(5*time.Minute, 10*time.Minute)
-
-	/*
-			proxyUrl, err := url.Parse(httpProxy)
-			if err != nil {
-				log.Printf("Failed setting up proxy: %s", err)
-			} else {
-				// accept any certificate (might be useful for testing)
-				customClient := &http.Client{
-					Transport: &http.Transport{
-						TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-						Proxy:           http.ProxyURL(proxyUrl),
-					},
-
-					// 15 second timeout
-					Timeout: 15 * 15time.Second,
-
-					// don't follow redirect
-					CheckRedirect: func(req *http.Request, via []*http.Request) error {
-						return http.ErrUseLastResponse
-					},
-				}
-
-				// Override http(s) default protocol to use our custom client
-				client.InstallProtocol("http", githttp.NewClient(customClient))
-				client.InstallProtocol("https", githttp.NewClient(customClient))
-			}
-		}
-
-		httpsProxy := os.Getenv("GSOC2_HTTPS_PROXY")
-		if len(httpsProxy) > 0 {
-			log.Printf("Running with HTTPS proxy %s", httpsProxy)
-		}
-	*/
-
-	setUsers := false
-	log.Printf("[DEBUG] Getting organizations")
-	orgQuery := datastore.NewQuery("Organizations")
-	var activeOrgs []gsoc2.Org
-	_, err := dbclient.GetAll(ctx, orgQuery, &activeOrgs)
-	if err != nil {
-		log.Printf("Error getting organizations!")
-	} else {
-		// Add all users to it
-		if len(activeOrgs) == 1 {
-			setUsers = true
-		}
-
-		log.Printf("Organizations exist!")
-		if len(activeOrgs) == 0 {
-			log.Printf(`[DEBUG] No orgs. Setting org "default"`)
-			orgSetupName := "default"
-			orgId := uuid.NewV4().String()
-			newOrg := gsoc2.Org{
-				Name:      orgSetupName,
-				Id:        orgId,
-				Org:       orgSetupName,
-				Users:     []gsoc2.User{},
-				Roles:     []string{"admin", "user"},
-				CloudSync: false,
-			}
-
-			err = gsoc2.SetOrg(ctx, newOrg, newOrg.Id)
-			if err != nil {
-				log.Printf("[WARNING] Failed setting organization: %s", err)
-			} else {
-				log.Printf("[WARNING] Successfully created the default org!")
-				setUsers = true
-			}
-		} else {
-			log.Printf("[DEBUG] There are %d org(s).", len(activeOrgs))
-
-			if len(activeOrgs) == 1 {
-				if len(activeOrgs[0].Users) == 0 {
-					log.Printf("[WARNING] ORG doesn't have any users??")
-
-					q := datastore.NewQuery("Users")
-					var users []gsoc2.User
-					_, err = dbclient.GetAll(ctx, q, &users)
-					if err != nil && len(users) == 0 {
-						log.Printf("Failed getting users in org fix")
-					} else {
-						// Remapping everyone to admin. This should never happen.
-
-						for _, user := range users {
-							user.ActiveOrg = gsoc2.OrgMini{
-								Id:   activeOrgs[0].Id,
-								Name: activeOrgs[0].Name,
-								Role: "admin",
-							}
-
-							activeOrgs[0].Users = append(activeOrgs[0].Users, user)
-						}
-
-						err = gsoc2.SetOrg(ctx, activeOrgs[0], activeOrgs[0].Id)
-						if err != nil {
-							log.Printf("Failed setting org: %s", err)
-						} else {
-							log.Printf("Successfully updated org to have users!")
-						}
-					}
-
-				}
-			}
-		}
-	}
-
-	// Adding the users to the base organization since only one exists (default)
-	if setUsers && len(activeOrgs) > 0 {
-		activeOrg := activeOrgs[0]
-
-		q := datastore.NewQuery("Users")
-		var users []gsoc2.User
-		_, err = dbclient.GetAll(ctx, q, &users)
-		if err == nil {
-			setOrgBool := false
-			usernames := []string{}
-			for _, user := range users {
-				usernames = append(usernames, user.Username)
-				newUser := gsoc2.User{
-					Username: user.Username,
-					Id:       user.Id,
-					ActiveOrg: gsoc2.OrgMini{
-						Id: activeOrg.Id,
-					},
-					Orgs: []string{activeOrg.Id},
-					Role: user.Role,
-				}
-
-				found := false
-				for _, orgUser := range activeOrg.Users {
-					if user.Id == orgUser.Id {
-						found = true
-					}
-				}
-
-				if !found && len(user.Username) > 0 {
-					log.Printf("Adding user %s to org %s", user.Username, activeOrg.Name)
-					activeOrg.Users = append(activeOrg.Users, newUser)
-					setOrgBool = true
-				}
-			}
-
-			log.Printf("Users found: %s", strings.Join(usernames, ", "))
-
-			if setOrgBool {
-				err = gsoc2.SetOrg(ctx, activeOrg, activeOrg.Id)
-				if err != nil {
-					log.Printf("Failed setting org %s: %s!", activeOrg.Name, err)
-				} else {
-					log.Printf("UPDATED org %s!", activeOrg.Name)
-				}
-			}
-		}
-
-		log.Printf("Should add %d users to organization default", len(users))
-	}
-
-	if len(activeOrgs) == 0 {
-		orgQuery := datastore.NewQuery("Organizations")
-		_, err = dbclient.GetAll(ctx, orgQuery, &activeOrgs)
-		if err != nil {
-			log.Printf("Failed getting orgs the second time around")
-		}
-	}
-
-	// Fix active users etc
-	q := datastore.NewQuery("Users").Filter("active =", true)
-	var activeusers []gsoc2.User
-	_, err = dbclient.GetAll(ctx, q, &activeusers)
-	if err != nil && len(activeusers) == 0 {
-		log.Printf("Error getting users during init: %s", err)
-	} else {
-		log.Printf("Parsing all users and setting them to active.")
-		q := datastore.NewQuery("Users")
-		var users []gsoc2.User
-		_, err := dbclient.GetAll(ctx, q, &users)
-		//log.Printf("User ret: %s", err)
-
-		if len(activeusers) == 0 && len(users) > 0 {
-			log.Printf("No active users found - setting ALL to active")
-			if err == nil {
-				for _, user := range users {
-					user.Active = true
-					if len(user.Username) == 0 {
-						gsoc2.DeleteKey(ctx, "Users", strings.ToLower(user.Username))
-						continue
-					}
-
-					if len(user.Role) > 0 {
-						user.Roles = append(user.Roles, user.Role)
-					}
-
-					if len(user.Orgs) == 0 {
-						defaultName := "default"
-						user.Orgs = []string{defaultName}
-						user.ActiveOrg = gsoc2.OrgMini{
-							Name: defaultName,
-							Role: "admin",
-						}
-					}
-
-					err = gsoc2.SetUser(ctx, &user, true)
-					if err != nil {
-						log.Printf("Failed to reset user")
-					} else {
-						log.Printf("Remade user %s with ID", user.Id)
-						err = gsoc2.DeleteKey(ctx, "Users", strings.ToLower(user.Username))
-						if err != nil {
-							log.Printf("Failed to delete old user by username")
-						}
-					}
-				}
-			}
-		} else if len(users) == 0 {
-			log.Printf("Trying to set up user based on environments GSOC2_DEFAULT_USERNAME & GSOC2_DEFAULT_PASSWORD")
-			username := os.Getenv("GSOC2_DEFAULT_USERNAME")
-			password := os.Getenv("GSOC2_DEFAULT_PASSWORD")
-			if len(username) == 0 || len(password) == 0 {
-				log.Printf("GSOC2_DEFAULT_USERNAME and GSOC2_DEFAULT_PASSWORD not defined as environments. Running without default user.")
-			} else {
-				apikey := os.Getenv("GSOC2_DEFAULT_APIKEY")
-
-				tmpOrg := gsoc2.OrgMini{
-					Name: "default",
-				}
-
-				err = createNewUser(username, password, "admin", apikey, tmpOrg)
-				if err != nil {
-					log.Printf("Failed to create default user %s: %s", username, err)
-				} else {
-					log.Printf("Successfully created user %s", username)
-				}
-			}
-		} else {
-			if len(users) < 10 && len(users) > 0 {
-				for _, user := range users {
-					log.Printf("[INFO] Username: %s, role: %s", user.Username, user.Role)
-				}
-			} else {
-				log.Printf("[INIT] Found %d users.", len(users))
-			}
-
-			if len(activeOrgs) == 1 && len(users) > 0 {
-				for _, user := range users {
-					if user.ActiveOrg.Id == "" && len(user.Username) > 0 {
-						user.ActiveOrg = gsoc2.OrgMini{
-							Id:   activeOrgs[0].Id,
-							Name: activeOrgs[0].Name,
-						}
-
-						err = gsoc2.SetUser(ctx, &user, true)
-						if err != nil {
-							log.Printf("Failed updating user %s with org", user.Username)
-						} else {
-							log.Printf("Updated user %s to have org", user.Username)
-						}
-					}
-				}
-			}
-			//log.Printf(users[0].Username)
-		}
-	}
-
-	// Gets environments and inits if it doesn't exist
-	count, err := gsoc2.GetEnvironmentCount()
-	if count == 0 && err == nil && len(activeOrgs) == 1 {
-		log.Printf("[INFO] Setting up environment with org %s", activeOrgs[0].Id)
-
-		defaultEnv := os.Getenv("ORG_ID")
-		if len(defaultEnv) == 0 {
-			defaultEnv = "Gsoc2"
-			log.Printf("[DEBUG] Setting default environment for org to %s", defaultEnv)
-		}
-
-		item := gsoc2.Environment{
-			Name:    defaultEnv,
-			Type:    "onprem",
-			OrgId:   activeOrgs[0].Id,
-			Default: true,
-			Id:      uuid.NewV4().String(),
-		}
-
-		err = gsoc2.SetEnvironment(ctx, &item)
-		if err != nil {
-			log.Printf("[WARNING] Failed setting up new environment")
-		}
-	} else if len(activeOrgs) == 1 {
-		log.Printf("[INFO] Setting up all environments with org %s", activeOrgs[0].Id)
-		var environments []gsoc2.Environment
-		q := datastore.NewQuery("Environments")
-		_, err = dbclient.GetAll(ctx, q, &environments)
-		if err == nil {
-			existingEnv := []string{}
-			_ = existingEnv
-			for _, item := range environments {
-				//if gsoc2.ArrayContains(existingEnv, item.Name) {
-				//	log.Printf("[WARNING] Env %s already exists - deleting it. %#v", item.Name, item)
-				//	err = DeleteKey(ctx, "Environments", item.Name)
-				//	if err != nil {
-				//		log.Printf("[WARNING] Env deletion error: %s", err)
-				//	}
-
-				//	continue
-				//}
-
-				//existingEnv = append(existingEnv, item.Name)
-
-				if item.OrgId == activeOrgs[0].Id && len(item.Id) > 0 {
-					continue
-				}
-
-				if len(item.Id) == 0 {
-					item.Id = uuid.NewV4().String()
-				}
-
-				item.OrgId = activeOrgs[0].Id
-				err = gsoc2.SetEnvironment(ctx, &item)
-				if err != nil {
-					log.Printf("[WARNING] Failed adding environment to org %s", activeOrgs[0].Id)
-				}
-			}
-		}
-	}
-
-	// Fixing workflows to have real activeorg IDs
-	//workflowQ := datastore.NewQuery("workflow")
-	//ret, err := dbclient.GetAll(ctx, workflowQ, &workflows)
-	//log.Printf("[INFO] Found %d workflows during startup", workflowCount)
-	//log.Printf("%#v, %s", ret, err)
-
-	var workflows []gsoc2.Workflow
-	if len(activeOrgs) == 1 {
-		q := datastore.NewQuery("workflow").Limit(35)
-		_, err = dbclient.GetAll(ctx, q, &workflows)
-		if err != nil && len(workflows) == 0 {
-			log.Printf("Error getting workflows in runinit: %s", err)
-		} else {
-			updated := 0
-			timeNow := time.Now().Unix()
-			for _, workflow := range workflows {
-				setLocal := false
-				if workflow.ExecutingOrg.Id == "" || len(workflow.OrgId) == 0 {
-					workflow.OrgId = activeOrgs[0].Id
-					workflow.ExecutingOrg = gsoc2.OrgMini{
-						Id:   activeOrgs[0].Id,
-						Name: activeOrgs[0].Name,
-					}
-
-					setLocal = true
-				} else if workflow.Edited == 0 {
-					workflow.Edited = timeNow
-					setLocal = true
-				}
-
-				if setLocal {
-					err = gsoc2.SetWorkflow(ctx, workflow, workflow.ID)
-					if err != nil {
-						log.Printf("Failed setting workflow in init: %s", err)
-					} else {
-						log.Printf("Fixed workflow %s to have the right info.", workflow.ID)
-						updated += 1
-					}
-				}
-			}
-
-			if updated > 0 {
-				log.Printf("Set workflow orgs for %d workflows", updated)
-			}
-		}
-
-		/*
-			fileq := datastore.NewQuery("Files").Limit(1)
-			count, err := dbclient.Count(ctx, fileq)
-			log.Printf("FILECOUNT: %d", count)
-			if err == nil && count < 10 {
-				basepath := "."
-				filename := "testfile.txt"
-				fileId := uuid.NewV4().String()
-				log.Printf("Creating new file reference %s because none exist!", fileId)
-				workflowId := "2cf1169d-b460-41de-8c36-28b2092866f8"
-				downloadPath := fmt.Sprintf("%s/%s/%s/%s", basepath, activeOrgs[0].Id, workflowId, fileId)
-
-				timeNow := time.Now().Unix()
-				newFile := File{
-					Id:           fileId,
-					CreatedAt:    timeNow,
-					UpdatedAt:    timeNow,
-					Description:  "Created by system for testing",
-					Status:       "active",
-					Filename:     filename,
-					OrgId:        activeOrgs[0].Id,
-					WorkflowId:   workflowId,
-					DownloadPath: downloadPath,
-				}
-
-				err = setFile(ctx, newFile)
-				if err != nil {
-					log.Printf("Failed setting file: %s", err)
-				} else {
-					log.Printf("Created file %s in init", newFile.DownloadPath)
-				}
-			}
-		*/
-
-		var allworkflowapps []gsoc2.AppAuthenticationStorage
-		q = datastore.NewQuery("workflowappauth")
-		_, err = dbclient.GetAll(ctx, q, &allworkflowapps)
-		if err == nil {
-			log.Printf("Setting up all app auths with org %s", activeOrgs[0].Id)
-			for _, item := range allworkflowapps {
-				if item.OrgId != "" {
-					continue
-				}
-
-				//log.Printf("Should update auth for %#v!", item)
-				item.OrgId = activeOrgs[0].Id
-				err = gsoc2.SetWorkflowAppAuthDatastore(ctx, item, item.Id)
-				if err != nil {
-					log.Printf("Failed adding AUTH to org %s", activeOrgs[0].Id)
-				}
-			}
-		}
-
-		var schedules []gsoc2.ScheduleOld
-		q = datastore.NewQuery("schedules")
-		_, err = dbclient.GetAll(ctx, q, &schedules)
-		if err == nil {
-			log.Printf("Setting up all schedules with org %s", activeOrgs[0].Id)
-			for _, item := range schedules {
-				if item.Org != "" {
-					continue
-				}
-
-				if item.Environment == "cloud" {
-					log.Printf("Skipping cloud schedule")
-					continue
-				}
-
-				item.Org = activeOrgs[0].Id
-				err = gsoc2.SetSchedule(ctx, item)
-				if err != nil {
-					log.Printf("Failed adding schedule to org %s", activeOrgs[0].Id)
-				}
-			}
-		}
-	}
-
-	log.Printf("Starting cloud schedules for orgs!")
-	type requestStruct struct {
-		ApiKey string `json:"api_key"`
-	}
-	for _, org := range activeOrgs {
-		if !org.CloudSync {
-			log.Printf("Skipping org %s because sync isn't set (1).", org.Id)
-			continue
-		}
-
-		//interval := int(org.SyncConfig.Interval)
-		interval := 15
-		if interval == 0 {
-			log.Printf("Skipping org %s because sync isn't set (0).", org.Id)
-			continue
-		}
-
-		log.Printf("[DEBUG] Should start schedule for org %s (%s)", org.Name, org.Id)
-		job := func() {
-			err := remoteOrgJobHandler(org, interval)
-			if err != nil {
-				log.Printf("[ERROR] Failed request with remote org setup (2): %s", err)
-			}
-		}
-
-		jobret, err := newscheduler.Every(int(interval)).Seconds().NotImmediately().Run(job)
-		if err != nil {
-			log.Printf("[CRITICAL] Failed to schedule org: %s", err)
-		} else {
-			log.Printf("Started sync on interval %d for org %s", interval, org.Name)
-			scheduledOrgs[org.Id] = jobret
-		}
-	}
-
-	// Gets schedules and starts them
-	log.Printf("Relaunching schedules")
-	schedules, err := gsoc2.GetAllSchedules(ctx, "ALL")
-	if err != nil {
-		log.Printf("Failed getting schedules during service init: %s", err)
-	} else {
-		log.Printf("Setting up %d schedule(s)", len(schedules))
-		url := &url.URL{}
-		for _, schedule := range schedules {
-			if schedule.Environment == "cloud" {
-				log.Printf("Skipping cloud schedule")
-				continue
-			}
-
-			//log.Printf("Schedule: %#v", schedule)
-			job := func() {
-				//log.Printf("[INFO] Running schedule %s with interval %d.", schedule.Id, schedule.Seconds)
-				//log.Printf("ARG: %s", schedule.WrappedArgument)
-
-				request := &http.Request{
-					URL:    url,
-					Method: "POST",
-					Body:   ioutil.NopCloser(strings.NewReader(schedule.WrappedArgument)),
-				}
-
-				orgId := ""
-				if len(activeOrgs) > 0 {
-					orgId = activeOrgs[0].Id
-				}
-
-				_, _, err := handleExecution(schedule.WorkflowId, gsoc2.Workflow{}, request, orgId)
-				if err != nil {
-					log.Printf("[WARNING] Failed to execute %s: %s", schedule.WorkflowId, err)
-				}
-			}
-
-			//log.Printf("Schedule time: every %d seconds", schedule.Seconds)
-			jobret, err := newscheduler.Every(schedule.Seconds).Seconds().NotImmediately().Run(job)
-			if err != nil {
-				log.Printf("Failed to schedule workflow: %s", err)
-			}
-
-			scheduledJobs[schedule.Id] = jobret
-		}
-	}
-
-	// form force-flag to download workflow apps
-	forceUpdateEnv := os.Getenv("GSOC2_APP_FORCE_UPDATE")
-	forceUpdate := false
-	if len(forceUpdateEnv) > 0 && forceUpdateEnv == "true" {
-		log.Printf("Forcing to rebuild apps")
-		forceUpdate = true
-	}
-
-	// Getting apps to see if we should initialize a test
-	workflowapps, err := gsoc2.GetAllWorkflowApps(ctx, 1000, 0)
-	log.Printf("[INFO] Getting and validating workflowapps. Got %d with err %s", len(workflowapps), err)
-	if err != nil && len(workflowapps) == 0 {
-		log.Printf("[WARNING] Failed getting apps (runInit): %s", err)
-	} else if err == nil && len(workflowapps) > 0 {
-		var allworkflowapps []gsoc2.WorkflowApp
-		q := datastore.NewQuery("workflowapp")
-		_, err := dbclient.GetAll(ctx, q, &allworkflowapps)
-		if err == nil {
-			for _, workflowapp := range allworkflowapps {
-				if workflowapp.Edited == 0 {
-					err = gsoc2.SetWorkflowAppDatastore(ctx, workflowapp, workflowapp.ID)
-					if err == nil {
-						log.Printf("[INFO] Updating time for workflowapp %s:%s", workflowapp.Name, workflowapp.AppVersion)
-					}
-				}
-			}
-		}
-
-	} else if err == nil && len(workflowapps) == 0 {
-		log.Printf("Downloading default workflow apps")
-		fs := memfs.New()
-		storer := memory.NewStorage()
-
-		url := os.Getenv("GSOC2_APP_DOWNLOAD_LOCATION")
-		if len(url) == 0 {
-			url = "https://github.com/gsoc2/gsoc2-apps"
-		}
-
-		username := os.Getenv("GSOC2_DOWNLOAD_AUTH_USERNAME")
-		password := os.Getenv("GSOC2_DOWNLOAD_AUTH_PASSWORD")
-
-		cloneOptions := &git.CloneOptions{
-			URL: url,
-		}
-
-		if len(username) > 0 && len(password) > 0 {
-			cloneOptions.Auth = &http2.BasicAuth{
-				Username: username,
-				Password: password,
-			}
-		}
-		branch := os.Getenv("GSOC2_DOWNLOAD_AUTH_BRANCH")
-		if len(branch) > 0 && branch != "master" && branch != "main" {
-			cloneOptions.ReferenceName = plumbing.ReferenceName(branch)
-		}
-
-		log.Printf("[DEBUG] Getting apps from URL '%s'", url)
-
-		r, err := git.Clone(storer, fs, cloneOptions)
-
-		if err != nil {
-			log.Printf("Failed loading repo into memory (init): %s", err)
-		}
-
-		dir, err := fs.ReadDir("")
-		if err != nil {
-			log.Printf("Failed reading folder: %s", err)
-		}
-		_ = r
-		//iterateAppGithubFolders(fs, dir, "", "testing")
-
-		// FIXME: Get all the apps?
-		_, _, err = IterateAppGithubFolders(ctx, fs, dir, "", "", forceUpdate)
-		if err != nil {
-			log.Printf("[WARNING] Error from app load in init: %s", err)
-		}
-		//_, _, err = iterateAppGithubFolders(fs, dir, "", "", forceUpdate)
-
-		// Hotloads locally
-		location := os.Getenv("GSOC2_APP_HOTLOAD_FOLDER")
-		if len(location) != 0 {
-			handleAppHotload(ctx, location, false)
-		}
-	}
-
-	log.Printf("[INFO] Downloading OpenAPI data for search - EXTRA APPS")
-	apis := "https://github.com/gsoc2/security-openapis"
-
-	// FIXME: This part gets memory problems. Fix in the future to load these apps too.
-	//apis := "https://github.com/APIs-guru/openapi-directory"
-	fs := memfs.New()
-	storer := memory.NewStorage()
-	cloneOptions := &git.CloneOptions{
-		URL: apis,
-	}
-	_, err = git.Clone(storer, fs, cloneOptions)
-	if err != nil {
-		log.Printf("Failed loading repo %s into memory: %s", apis, err)
-	} else {
-		log.Printf("[INFO] Finished git clone. Looking for updates to the repo.")
-		dir, err := fs.ReadDir("")
-		if err != nil {
-			log.Printf("Failed reading folder: %s", err)
-		}
-
-		iterateOpenApiGithub(fs, dir, "", "")
-		log.Printf("[INFO] Finished downloading extra API samples")
-	}
-
-	workflowLocation := os.Getenv("GSOC2_DOWNLOAD_WORKFLOW_LOCATION")
-	if len(workflowLocation) > 0 {
-		log.Printf("[INFO] Downloading WORKFLOWS from %s if no workflows - EXTRA workflows", workflowLocation)
-		q := datastore.NewQuery("workflow").Limit(35)
-		var workflows []gsoc2.Workflow
-		_, err = dbclient.GetAll(ctx, q, &workflows)
-		if err != nil && len(workflows) == 0 {
-			log.Printf("Error getting workflows: %s", err)
-		} else {
-			if len(workflows) == 0 {
-				username := os.Getenv("GSOC2_DOWNLOAD_WORKFLOW_USERNAME")
-				password := os.Getenv("GSOC2_DOWNLOAD_WORKFLOW_PASSWORD")
-				orgId := ""
-				if len(activeOrgs) > 0 {
-					orgId = activeOrgs[0].Id
-				}
-
-				err = loadGithubWorkflows(workflowLocation, username, password, "", os.Getenv("GSOC2_DOWNLOAD_WORKFLOW_BRANCH"), orgId)
-				if err != nil {
-					log.Printf("Failed to upload workflows from github: %s", err)
-				} else {
-					log.Printf("[INFO] Finished downloading workflows from github!")
-				}
-			} else {
-				log.Printf("[INFO] Skipping because there are %d workflows already", len(workflows))
-			}
-
-		}
-	}
-
-	log.Printf("[INFO] Finished INIT")
-}
 
 func handleVerifyCloudsync(orgId string) (gsoc2.SyncFeatures, error) {
 	ctx := context.Background()
@@ -5244,7 +4352,7 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 
 	b, err := json.Marshal(requestData)
 	if err != nil {
-		log.Printf("Failed marshaling api key data: %s", err)
+		log.Printf("[ERROR] Failed marshaling api key data: %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed cloud sync: %s"}`, err)))
 		return
@@ -5271,7 +4379,8 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	//log.Printf("Respbody: %s", string(respBody))
+	log.Printf("[DEBUG] Respbody from sync: %s", string(respBody))
+
 	responseData := retStruct{}
 	err = json.Unmarshal(respBody, &responseData)
 	if err != nil {
@@ -5309,13 +4418,13 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 	job := func() {
 		err := remoteOrgJobHandler(*org, interval)
 		if err != nil {
-			log.Printf("[ERROR] Failed request with remote org setup (1): %s", err)
+			log.Printf("[ERROR] Failed request with remote org sync (1): %s", err)
 		}
 	}
 
 	jobret, err := newscheduler.Every(int(interval)).Seconds().NotImmediately().Run(job)
 	if err != nil {
-		log.Printf("[CRITICAL] Failed to schedule org: %s", err)
+		log.Printf("[ERROR] Failed to schedule org: %s", err)
 	} else {
 		log.Printf("[INFO] Started sync on interval %d for org %s", interval, org.Name)
 		scheduledOrgs[org.Id] = jobret
@@ -5389,251 +4498,6 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 
 	resp.WriteHeader(200)
 	resp.Write(respBody)
-}
-
-// Runs DB migration from Datastore to Opensearch
-// If the function has "ALL" in it, that means it's intended to be used for Orgs
-// but that we've added a function to grab everything
-func migrateDatabase(resp http.ResponseWriter, request *http.Request) {
-	cors := gsoc2.HandleCors(resp, request)
-	if cors {
-		return
-	}
-
-	user, userErr := gsoc2.HandleApiAuthentication(resp, request)
-	if userErr != nil {
-		log.Printf("[WARNING] Api authentication failed in make workflow public: %s", userErr)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	if user.Role != "admin" {
-		log.Printf("[WARNING] Failed to migrate because you're not admin")
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	if strings.ToLower(os.Getenv("GSOC2_ELASTIC")) != "false" {
-		log.Printf("[WARNING] Failed to migrate because main DB is Elastic. Set GSOC2_ELASTIC=false in .env")
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	ctx := context.Background()
-	//es := gsoc2.GetEsConfig()
-	_, err := gsoc2.RunInit(*dbclient, storage.Client{}, gceProject, "onprem", false, "")
-	if err != nil {
-		log.Printf("[WARNING] Failed to start migration because of init issues: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	log.Printf("\n\n------- STARTING MIGRATION TO OPENSEARCH --------")
-	users, err := gsoc2.GetAllUsers(ctx)
-	if err != nil {
-		log.Printf("[ERROR] Failed getting users: %#v", err)
-	} else {
-		log.Printf("[DEBUG] Found %d user(s) to be migrated", len(users))
-	}
-
-	orgs, err := gsoc2.GetAllOrgs(ctx)
-	if err != nil {
-		log.Printf("[ERROR] Failed getting orgs: %#v", err)
-	} else {
-		log.Printf("[DEBUG] Found %d org(s) to be migrated", len(orgs))
-	}
-
-	workflows, err := gsoc2.GetAllWorkflows(ctx, "ALL")
-	if err != nil {
-		log.Printf("[ERROR] Failed getting workflows: %#v", err)
-	} else {
-		log.Printf("[DEBUG] Found %d workflows(s) to be migrated", len(workflows))
-	}
-
-	apps, err := gsoc2.GetAllWorkflowApps(ctx, 0, 0)
-	if err != nil {
-		log.Printf("[ERROR] Failed getting apps: %#v", err)
-	} else {
-		log.Printf("[DEBUG] Found %d app(s) to be migrated", len(apps))
-	}
-
-	openapiApps, err := gsoc2.GetAllOpenApi(ctx)
-	if err != nil {
-		log.Printf("[ERROR] Failed getting openapi apps: %#v", err)
-	} else {
-		log.Printf("[DEBUG] Found %d openapi(s) to be migrated", len(openapiApps))
-	}
-
-	workflowappauth, err := gsoc2.GetAllWorkflowAppAuth(ctx, "ALL")
-	if err != nil {
-		log.Printf("[ERROR] Failed getting app auth: %#v", err)
-	} else {
-		log.Printf("[DEBUG] Found %d appauth(s) to be migrated", len(workflowappauth))
-	}
-
-	environments, err := gsoc2.GetEnvironments(ctx, "ALL")
-	if err != nil {
-		log.Printf("[ERROR] Failed getting environments: %#v", err)
-	} else {
-		log.Printf("[DEBUG] Found %d environment(s) to be migrated", len(environments))
-	}
-
-	hooks, err := gsoc2.GetAllHooks(ctx)
-	if err != nil {
-		log.Printf("[ERROR] Failed getting hooks: %#v", err)
-	} else {
-		log.Printf("[DEBUG] Found %d hook(s) to be migrated", len(hooks))
-	}
-
-	schedules, err := gsoc2.GetAllSchedules(ctx, "ALL")
-	if err != nil {
-		log.Printf("[ERROR] Failed getting schedules: %#v", err)
-	} else {
-		log.Printf("[DEBUG] Found %d schedule(s) to be migrated", len(schedules))
-	}
-
-	log.Printf("\n\n------- SWAPPING TO OPENSEARCH DB WITH ACQUIRED INFO ---------")
-	userSuccess := 0
-	orgSuccess := 0
-	workflowSuccess := 0
-	appSuccess := 0
-	openapiSuccess := 0
-	authSuccess := 0
-	envSuccess := 0
-	hookSuccess := 0
-	scheduleSuccess := 0
-	_, err = gsoc2.RunInit(*dbclient, storage.Client{}, gceProject, "onprem", false, "elasticsearch")
-
-	for _, item := range orgs {
-		err = gsoc2.SetOrg(ctx, item, item.Id)
-		if err != nil {
-			//log.Printf("[WARNING] Failed to update org in opensearch: %s", err)
-		} else {
-			//log.Printf("[DEBUG] Set org %s (%s) in opensearch", item.Name, item.Id)
-			orgSuccess += 1
-		}
-	}
-
-	log.Printf("----- ORGS FOUND: %d - success: %d - failed: %d", len(orgs), orgSuccess, len(orgs)-orgSuccess)
-
-	for _, item := range workflowappauth {
-		err = gsoc2.SetWorkflowAppAuthDatastore(ctx, item, item.Id)
-		if err != nil {
-			//log.Printf("[WARNING] Failed to update app auth in opensearch: %s", err)
-		} else {
-			//log.Printf("[DEBUG] Set app auth %s in opensearch", item.Id)
-			authSuccess += 1
-		}
-	}
-
-	log.Printf("----- AUTH FOUND: %d - success: %d - failed: %d", len(workflowappauth), authSuccess, len(workflowappauth)-authSuccess)
-
-	for _, item := range environments {
-		err = gsoc2.SetEnvironment(ctx, &item)
-		if err != nil {
-			//log.Printf("[WARNING] Failed to update env in opensearch: %s", err)
-		} else {
-			//log.Printf("[DEBUG] Set env %s in opensearch", item.Id)
-			envSuccess += 1
-		}
-	}
-
-	log.Printf("----- ENVS FOUND: %d - success: %d - failed: %d", len(environments), envSuccess, len(environments)-envSuccess)
-
-	for _, item := range hooks {
-		err = gsoc2.SetHook(ctx, item)
-		if err != nil {
-			//log.Printf("[WARNING] Failed to update hooks in opensearch: %s", err)
-		} else {
-			//log.Printf("[DEBUG] Set hook %s in opensearch", item.Id)
-			hookSuccess += 1
-		}
-	}
-
-	log.Printf("---- HOOKS FOUND: %d - success: %d - failed: %d", len(hooks), hookSuccess, len(hooks)-hookSuccess)
-
-	for _, item := range schedules {
-		err = gsoc2.SetSchedule(ctx, item)
-		if err != nil {
-			//log.Printf("[WARNING] Failed to update schedule in opensearch: %s", err)
-		} else {
-			//log.Printf("[DEBUG] Set schedule %s in opensearch", item.Id)
-			scheduleSuccess += 1
-		}
-	}
-
-	log.Printf(" SCHEDULES FOUND: %d - success: %d - failed: %d", len(schedules), scheduleSuccess, len(schedules)-scheduleSuccess)
-
-	for _, item := range users {
-		err = gsoc2.SetUser(ctx, &item, false)
-		if err != nil {
-			//log.Printf("[WARNING] Failed to update user in opensearch: %s", err)
-		} else {
-			//log.Printf("[DEBUG] Set user %s (%s) in opensearch", item.Username, item.Id)
-			userSuccess += 1
-		}
-	}
-
-	log.Printf("---- USERS FOUND: %d - success: %d - failed: %d", len(users), userSuccess, len(users)-userSuccess)
-
-	for _, item := range workflows {
-		err = gsoc2.SetWorkflow(ctx, item, item.ID)
-		if err != nil {
-			//log.Printf("[WARNING] Failed to update workflow in opensearch: %s", err)
-		} else {
-			//log.Printf("[DEBUG] Set workflow %s (%s) in opensearch", item.Name, item.ID)
-			workflowSuccess += 1
-		}
-	}
-
-	log.Printf(" WORKFLOWS FOUND: %d - success: %d - failed: %d", len(workflows), workflowSuccess, len(workflows)-workflowSuccess)
-
-	for _, item := range openapiApps {
-		err = gsoc2.SetOpenApiDatastore(ctx, item.ID, item)
-		if err != nil {
-			//log.Printf("[WARNING] Failed to update openapi app in opensearch: %s", err)
-		} else {
-			//log.Printf("[DEBUG] Set openapi %s in opensearch", item.ID)
-			openapiSuccess += 1
-		}
-	}
-
-	log.Printf("-- OpenAPI FOUND: %d - success: %d - failed: %d", len(openapiApps), openapiSuccess, len(openapiApps)-openapiSuccess)
-
-	for _, item := range apps {
-		err = gsoc2.SetWorkflowAppDatastore(ctx, item, item.ID)
-		if err != nil {
-			//log.Printf("[WARNING] Failed to update app in opensearch: %s", err)
-		} else {
-			//log.Printf("[DEBUG] Set app %s (%s) in opensearch", item.Name, item.ID)
-			appSuccess += 1
-		}
-	}
-
-	log.Printf("----- APPS FOUND: %d - success: %d - failed: %d", len(apps), appSuccess, len(apps)-appSuccess)
-
-	// Handle users
-	// 1. Get users
-	// 2. Get organizations
-	// 4. Get workflows
-	// 5. Get apps
-	// 6. Get workflowappauth
-	// 7. Get workflowexecution
-	// 9. Get Environments
-	// 10. Get hooks
-	// 11. Get openapi3
-	// 12. Get schedules
-
-	//log.Printf("[INFO] Successfully published workflow %s (%s) TO CLOUD", workflow.Name, workflow.ID)
-	log.Printf("\n\n[DEBUG] Successfully updated ran migration from Datastore to Opensearch!")
-	resp.WriteHeader(200)
-	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
-	log.Printf("[DEBUG] Panicing to force-restart Gsoc2 post-migration. Stop Gsoc2 and change database. Docs: https://soc2.khulnasoft.com/docs/configuration#database_migration")
-	os.Exit(0)
 }
 
 func makeWorkflowPublic(resp http.ResponseWriter, request *http.Request) {
@@ -5783,6 +4647,8 @@ func makeWorkflowPublic(resp http.ResponseWriter, request *http.Request) {
 	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
 }
 
+
+
 func handleAppZipUpload(resp http.ResponseWriter, request *http.Request) {
 	cors := gsoc2.HandleCors(resp, request)
 	if cors {
@@ -5841,6 +4707,8 @@ func handleAppZipUpload(resp http.ResponseWriter, request *http.Request) {
 	resp.Write([]byte("OK"))
 }
 
+
+
 func initHandlers() {
 	var err error
 	ctx := context.Background()
@@ -5854,22 +4722,8 @@ func initHandlers() {
 		elasticConfig = ""
 	}
 
-	dbclient, err = datastore.NewClient(ctx, gceProject, option.WithGRPCDialOption(grpc.WithNoProxy()))
-	if err != nil {
-		if elasticConfig == "" {
-			log.Printf("[ERROR] Database client error during init: %s. Env: GSOC2_ELASTIC=false", err)
-		} else {
-			if !strings.Contains(fmt.Sprintf("%s", err), "find default credentials") {
-				log.Printf("[DEBUG] Database client error info during init: %s. Here for backwards compatibility: not critical.", err)
-			}
-			dbclient = &datastore.Client{}
-		}
-	} else {
-		//log.Printf("Database client initiated: %s", dbclient)
-	}
-
 	for {
-		_, err = gsoc2.RunInit(*dbclient, storage.Client{}, gceProject, "onprem", true, elasticConfig)
+		_, err = gsoc2.RunInit(*gsoc2.GetDatastore(), *gsoc2.GetStorage(), gceProject, "onprem", true, elasticConfig)
 		if err != nil {
 			log.Printf("[ERROR] Error in initial database connection. Retrying in 5 seconds. %s", err)
 			time.Sleep(5 * time.Second)
@@ -5882,14 +4736,18 @@ func initHandlers() {
 	log.Printf("[DEBUG] Initialized Gsoc2 database connection. Setting up environment.")
 
 	if elasticConfig == "elasticsearch" {
-		time.Sleep(5 * time.Second)
+		time.Sleep(10 * time.Second)
 		go runInitEs(ctx)
 	} else {
-		go runInit(ctx)
+		//go gsoc2.runInit(ctx)
+		log.Printf("[ERROR] Opensearch is the only viable option. Please set GSOC2_ELASTIC=true") 
+		os.Exit(1)
 	}
 
 	r := mux.NewRouter()
 	r.HandleFunc("/api/v1/_ah/health", gsoc2.HealthCheckHandler)
+	r.HandleFunc("/api/v1/health", gsoc2.RunOpsHealthCheck).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/health/stats", gsoc2.GetOpsDashboardStats).Methods("GET", "OPTIONS")
 
 	// Make user related locations
 	// Fix user changes with org
@@ -5940,6 +4798,7 @@ func initHandlers() {
 	// App specific
 	// From here down isnt checked for org specific
 	r.HandleFunc("/api/v1/apps/{key}/execute", executeSingleAction).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/apps/{key}/run", executeSingleAction).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/categories", gsoc2.GetActiveCategories).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/categories/run", gsoc2.RunCategoryAction).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/upload", handleAppZipUpload).Methods("POST", "OPTIONS")
@@ -5962,10 +4821,6 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/apps/authentication/{appauthId}/config", gsoc2.SetAuthenticationConfig).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/authentication/{appauthId}", gsoc2.DeleteAppAuthentication).Methods("DELETE", "OPTIONS")
 
-	// Related to NFT things
-	r.HandleFunc("/api/v1/workflows/collections/load", gsoc2.LoadCollections).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/workflows/collections/{key}", gsoc2.HandleGetCollection).Methods("GET", "OPTIONS")
-
 	// Related to use-cases that are not directly workflows.
 	r.HandleFunc("/api/v1/workflows/usecases/{key}", gsoc2.HandleGetUsecase).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/usecases", gsoc2.LoadUsecases).Methods("GET", "OPTIONS")
@@ -5981,11 +4836,14 @@ func initHandlers() {
 	/* Everything below here increases the counters*/
 	r.HandleFunc("/api/v1/workflows", gsoc2.GetWorkflows).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows", gsoc2.SetNewWorkflow).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/workflows/search", gsoc2.HandleWorkflowRunSearch).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/schedules", gsoc2.HandleGetSchedules).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/executions", gsoc2.GetWorkflowExecutions).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/workflows/{key}/executions/{key}/rerun", checkUnfinishedExecution).Methods("GET", "POST", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/executions/{key}/abort", gsoc2.AbortExecution).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/schedule", scheduleWorkflow).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/download_remote", loadSpecificWorkflows).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/workflows/{key}/run", executeWorkflow).Methods("GET", "POST", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/execute", executeWorkflow).Methods("GET", "POST", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/schedule/{schedule}", stopSchedule).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/stream", gsoc2.HandleStreamWorkflow).Methods("GET", "OPTIONS")
@@ -5994,6 +4852,9 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/workflows/{key}", gsoc2.SaveWorkflow).Methods("PUT", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}", gsoc2.GetSpecificWorkflow).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/recommend", gsoc2.HandleActionRecommendation).Methods("POST", "OPTIONS")
+
+	// First v2 API
+	r.HandleFunc("/api/v2/workflows/{key}/executions", gsoc2.GetWorkflowExecutionsV2).Methods("GET", "OPTIONS")
 
 	// New for recommendations in Gsoc2
 	r.HandleFunc("/api/v1/recommendations/get_actions", gsoc2.HandleActionRecommendation).Methods("POST", "OPTIONS")
@@ -6045,6 +4906,8 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/orgs/{orgId}/create_sub_org", gsoc2.HandleCreateSubOrg).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/change", gsoc2.HandleChangeUserOrg).Methods("POST", "OPTIONS") // Swaps to the org
 
+	r.HandleFunc("/api/v1/orgs/{orgId}", gsoc2.HandleDeleteOrg).Methods("DELETE", "OPTIONS")
+
 	// This is a new API that validates if a key has been seen before.
 	// Not sure what the best course of action is for it.
 	r.HandleFunc("/api/v1/environments/{key}/stop", gsoc2.HandleStopExecutions).Methods("GET", "POST", "OPTIONS")
@@ -6053,14 +4916,20 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/orgs/{orgId}/validate_app_values", gsoc2.HandleKeyValueCheck).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/list_cache", gsoc2.HandleListCacheKeys).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/get_cache", gsoc2.HandleGetCacheKey).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/orgs/{orgId}/set_cache", gsoc2.HandleSetCacheKey).Methods("POST", "PUT", "OPTIONS")
-	r.HandleFunc("/api/v1/orgs/{orgId}/cache/{cache_key}", gsoc2.HandleDeleteCacheKey).Methods("DELETE", "OPTIONS")
+	r.HandleFunc("/api/v1/orgs/{orgId}/set_cache", gsoc2.HandleSetCacheKey).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/stats", gsoc2.HandleGetStatistics).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/orgs/{orgId}/revisions", gsoc2.GetWorkflowRevisions).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/orgs/{orgId}/statistics", gsoc2.HandleGetStatistics).Methods("GET", "OPTIONS")
+
+	r.HandleFunc("/api/v1/orgs/{orgId}/cache", gsoc2.HandleListCacheKeys).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/orgs/{orgId}/cache", gsoc2.HandleSetCacheKey).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/orgs/{orgId}/cache/{cache_key}", gsoc2.HandleDeleteCacheKey).Methods("DELETE", "OPTIONS")
+	r.HandleFunc("/api/v1/orgs/{orgId}/datastore", gsoc2.HandleListCacheKeys).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/orgs/{orgId}/datastore", gsoc2.HandleSetCacheKey).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/orgs/{orgId}/datastore/{cache_key}", gsoc2.HandleDeleteCacheKey).Methods("DELETE", "OPTIONS")
+
 
 	// Docker orborus specific - downloads an image
 	r.HandleFunc("/api/v1/get_docker_image", getDockerImage).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/migrate_database", migrateDatabase).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/login_sso", gsoc2.HandleSSO).Methods("GET", "POST", "OPTIONS")
 	r.HandleFunc("/api/v1/login_openid", gsoc2.HandleOpenId).Methods("GET", "POST", "OPTIONS")
 
@@ -6092,11 +4961,13 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/dashboards/{key}/widgets", gsoc2.HandleNewWidget).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/dashboards/{key}/widgets/{widget_id}", gsoc2.HandleGetWidget).Methods("GET", "OPTIONS")
 
+	r.Use(gsoc2.RequestMiddleware)
 	http.Handle("/", r)
 }
 
 // Had to move away from mux, which means Method is fucked up right now.
 func main() {
+
 	initHandlers()
 	hostname, err := os.Hostname()
 	if err != nil {

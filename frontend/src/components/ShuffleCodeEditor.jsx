@@ -1,4 +1,5 @@
 import React, {useState, useEffect, useLayoutEffect} from 'react';
+import { toast } from 'react-toastify';
 import {
 	CircularProgress, 
 	IconButton,
@@ -12,51 +13,52 @@ import {
 	Menu,
 	MenuItem,
 	Button,
-} from '@material-ui/core';
+} from '@mui/material';
 
 import theme from '../theme.jsx';
 import Checkbox from '@mui/material/Checkbox';
 import { orange } from '@mui/material/colors';
 import { isMobile } from "react-device-detect" 
-import NestedMenuItem from "material-ui-nested-menu-item";
+import { NestedMenuItem } from "mui-nested-menu"
 import { GetParsedPaths, FindJsonPath } from "../views/Apps.jsx";
 import { SetJsonDotnotation } from "../views/AngularWorkflow.jsx";
+import { vscodeDark, vscodeDarkInit } from '@uiw/codemirror-theme-vscode';
 
 import {
 	FullscreenExit as FullscreenExitIcon,
 	Extension as ExtensionIcon, 
-  Apps as AppsIcon,
-  FavoriteBorder as FavoriteBorderIcon,
-  Schedule as ScheduleIcon,
-  FormatListNumbered as FormatListNumberedIcon,
+	Apps as AppsIcon,
+	FavoriteBorder as FavoriteBorderIcon,
+	Schedule as ScheduleIcon,
+	FormatListNumbered as FormatListNumberedIcon,
 	SquareFoot as SquareFootIcon,
-  Circle as  CircleIcon,
-  Add as AddIcon,
+	Circle as  CircleIcon,
+	Add as AddIcon,
 	PlayArrow as PlayArrowIcon, 
-} from '@mui/icons-material';
-
-import {
 	AutoFixHigh as AutoFixHighIcon, 
+	Close as CloseIcon,
 	CompressOutlined, 
 	QrCodeScannerOutlined,
 } from '@mui/icons-material';
+
 
 import { validateJson } from "../views/Workflows.jsx";
 import ReactJson from "react-json-view";
 import PaperComponent from "../components/PaperComponent.jsx";
 
 import CodeMirror from '@uiw/react-codemirror';
-import 'codemirror/keymap/sublime';
-import 'codemirror/addon/selection/mark-selection.js'
-import 'codemirror/theme/gruvbox-dark.css';
-import 'codemirror/theme/duotone-light.css';
+//import 'codemirror/keymap/sublime';
+//import 'codemirror/addon/selection/mark-selection.js'
+//import 'codemirror/theme/gruvbox-dark.css';
+//import 'codemirror/theme/duotone-light.css';
 import {indentWithTab} from "@codemirror/commands"
 import { padding, textAlign } from '@mui/system';
 import data from '../frameworkStyle.jsx';
 import { useNavigate, Link, useParams } from "react-router-dom";
+import { tags as t } from '@lezer/highlight';
 import { createTheme } from '@uiw/codemirror-themes';
 
-import { tags } from '@lezer/highlight';
+
 
 const liquidFilters = [
 	{"name": "Size", "value": "size", "example": ""},
@@ -81,44 +83,41 @@ const pythonFilters = [
 	{"name": "Handle JSON", "value": `{% python %}\nimport json\njsondata = json.loads(r"""$nodename""")\n{% endpython %}`, "example": ``},
 ]
 
-//const gsoc2Theme = createTheme({
-//  theme: 'dark',
-//  settings: {
-//    background: '#282828',
-//    foreground: '#282828',
-//    caret: '#5d00ff',
-//    selection: '#036dd626',
-//    selectionMatch: '#036dd626',
-//    lineHighlight: '#8a91991a',
-//    gutterBackground: '#282828',
-//    gutterForeground: '#8a919966',
-//		fontSize: 18,
-//		borderRadius: theme.palette.borderRadius,
-//		border: `2px solid ${theme.palette.inputColor}`,
-//  },
-//  styles: [
-//    { tag: tags.comment, color: '#787b8099' },
-//    { tag: tags.variableName, color: '#0080ff' },
-//    { tag: [tags.string, tags.special(tags.brace)], color: '#5c6166' },
-//    { tag: tags.number, color: '#5c6166' },
-//    { tag: tags.bool, color: '#5c6166' },
-//    { tag: tags.null, color: '#5c6166' },
-//    { tag: tags.keyword, color: '#5c6166' },
-//    { tag: tags.operator, color: '#5c6166' },
-//    { tag: tags.className, color: '#5c6166' },
-//    { tag: tags.definition(tags.typeName), color: '#5c6166' },
-//    { tag: tags.typeName, color: '#5c6166' },
-//    { tag: tags.angleBracket, color: '#5c6166' },
-//    { tag: tags.tagName, color: '#5c6166' },
-//    { tag: tags.attributeName, color: '#5c6166' },
-//  ],
-//});
+/*
+const gsoc2Theme = createTheme({
+  theme: 'dark',
+  settings: {
+    background: "rgba(40,40,40, 1)",
+    foreground: '#75baff',
+    caret: '#5d00ff',
+    selection: '#036dd626',
+    selectionMatch: '#036dd626',
+    lineHighlight: '#8a91991a',
+    gutterForeground: '#8a919966',
+  },
+  styles: [
+    { tag: t.comment, color: '#787b8099' },
+    { tag: t.variableName, color: '#0080ff' },
+    { tag: [t.string, t.special(t.brace)], color: '#5c6166' },
+    { tag: t.number, color: '#5c6166' },
+    { tag: t.bool, color: '#5c6166' },
+    { tag: t.null, color: '#5c6166' },
+    { tag: t.keyword, color: '#5c6166' },
+    { tag: t.operator, color: '#5c6166' },
+    { tag: t.className, color: '#5c6166' },
+    { tag: t.definition(t.typeName), color: '#5c6166' },
+    { tag: t.typeName, color: '#5c6166' },
+    { tag: t.angleBracket, color: '#5c6166' },
+    { tag: t.tagName, color: '#5c6166' },
+    { tag: t.attributeName, color: '#5c6166' },
+  ],
+});
+*/
 
 const CodeEditor = (props) => {
 	const { 
 		globalUrl, 
 		fieldCount, 
-		setFieldCount, 
 		actionlist, 
 		changeActionParameterCodeMirror, 
 		expansionModalOpen, 
@@ -132,6 +131,8 @@ const CodeEditor = (props) => {
 		selectedAction ,
 		workflowExecutions,
 		getParents,
+
+		fieldname,
 	} = props
 
 	const [localcodedata, setlocalcodedata] = React.useState(codedata === undefined || codedata === null || codedata.length === 0 ? "" : codedata);
@@ -140,7 +141,7 @@ const CodeEditor = (props) => {
 	const [validation, setValidation] = React.useState(false);
 	const [expOutput, setExpOutput] = React.useState(" ");
 	const [linewrap, setlinewrap] = React.useState(true);
-	const [codeTheme, setcodeTheme] = React.useState("gruvbox-dark");
+	//const [codeTheme, setcodeTheme] = React.useState("gruvbox-dark");
 	const [editorPopupOpen, setEditorPopupOpen] = React.useState(false);
 
 	const [currentCharacter, setCurrentCharacter] = React.useState(-1);
@@ -155,8 +156,8 @@ const CodeEditor = (props) => {
 	const [mainVariables, setMainVariables] = React.useState([]);
 	const [availableVariables, setAvailableVariables] = React.useState([]);
 
-  const [menuPosition, setMenuPosition] = useState(null);
-  const [showAutocomplete, setShowAutocomplete] = React.useState(false);
+    const [menuPosition, setMenuPosition] = useState(null);
+    const [showAutocomplete, setShowAutocomplete] = React.useState(false);
 
 	const [isAiLoading, setIsAiLoading] = React.useState(false);
 
@@ -206,6 +207,9 @@ const CodeEditor = (props) => {
 
 		setAvailableVariables(allVariables)
 		setMainVariables(tmpVariables)
+	
+		console.log("Checking local codedata: ", localcodedata)
+		expectedOutput(localcodedata)
 	}, [])
 
 	const aiSubmit = (value, inputAction) => {
@@ -546,7 +550,6 @@ const CodeEditor = (props) => {
 		var code_lines = localcodedata.split('\n')
 		for (var i = 0; i < code_lines.length; i++){
 			var current_code_line = code_lines[i]
-			// console.log(current_code_line)
 
 			var variable_occurence = current_code_line.match(/[\\]{0,1}[$]{1}([a-zA-Z0-9_-]+\.?){1}([a-zA-Z0-9#_-]+\.?){0,}/g)
 
@@ -609,8 +612,7 @@ const CodeEditor = (props) => {
 					var correctVariable = availableVariables.includes(fixedVariable)
 					if(!correctVariable) {
 						value.markText({line:i, ch:dollar_occurence[occ]}, {line:i, ch:dollar_occurence_len[occ]+dollar_occurence[occ]}, {"css": "background-color: rgb(248, 106, 62, 0.9); padding-top: 2px; padding-bottom: 2px; color: white"})
-					}
-					else{
+					} else {
 						value.markText({line:i, ch:dollar_occurence[occ]}, {line:i, ch:dollar_occurence_len[occ]+dollar_occurence[occ]}, {"css": "background-color: #8b8e26; padding-top: 2px; padding-bottom: 2px; color: white"})
 					}
 					// console.log(correctVariables)
@@ -659,6 +661,23 @@ const CodeEditor = (props) => {
 		setlocalcodedata(updatedCode)
 	}
 
+	const fixStringInput = (new_input) => {
+		// Newline fixes
+		new_input = new_input.replace(/\r\n/g, "\\n")
+		new_input = new_input.replace(/\n/g, "\\n")
+
+		// Quote fixes
+		new_input = new_input.replace(/\\"/g, '"')
+		new_input = new_input.replace(/"/g, '\\"')
+
+		new_input = new_input.replace(/\\'/g, "'")
+		new_input = new_input.replace(/'/g, "\\'")
+
+
+		return new_input
+	}
+
+
 	const expectedOutput = (input) => {
 		
 		//const found = input.match(/[$]{1}([a-zA-Z0-9_-]+\.?){1}([a-zA-Z0-9#_-]+\.?){0,}/g)
@@ -673,35 +692,38 @@ const CodeEditor = (props) => {
 			try { 
 				for (var i = 0; i < found.length; i++) {
 					try {
-						// For found specifically, should replace .#\d with .# with regex
-						
-
-						//found[i] = found[i].toLowerCase()
 						const fixedVariable = fixVariable(found[i])
-						//var correctVariable = availableVariables.includes(fixedVariable)
-
-						// 
 						var valuefound = false
 						for (var j = 0; j < actionlist.length; j++) {
-							if(fixedVariable.slice(1,).toLowerCase() === actionlist[j].autocomplete.toLowerCase()){
-								valuefound = true 
+							if(fixedVariable.slice(1,).toLowerCase() !== actionlist[j].autocomplete.toLowerCase()){
+								continue
+							}
 
-								try {
-									if (typeof actionlist[j].example === "object") {
-										input = input.replace(found[i], JSON.stringify(actionlist[j].example), -1);
+							valuefound = true 
 
-									} else if (actionlist[j].example.trim().startsWith("{") || actionlist[j].example.trim().startsWith("[")) {
-										input = input.replace(found[i], JSON.stringify(actionlist[j].example), -1);
-									} else {
-										input = input.replace(found[i], actionlist[j].example, -1)
-									}
-								} catch (e) { 
-									input = input.replace(found[i], actionlist[j].example, -1)
+							console.log("Here. Checking if we got an example?")
+							try {
+								if (typeof actionlist[j].example === "object") {
+
+									input = input.replace(found[i], JSON.stringify(actionlist[j].example), -1);
+
+								} else if (actionlist[j].example.trim().startsWith("{") || actionlist[j].example.trim().startsWith("[")) {
+									input = input.replace(found[i], JSON.stringify(actionlist[j].example), -1);
+								} else {
+									console.log("This?")
+	
+									const newExample = fixStringInput(actionlist[j].example)
+									input = input.replace(found[i], newExample, -1)
 								}
-							} else {
-								// Couldn't find the correct example value
+							} catch (e) { 
+								input = input.replace(found[i], actionlist[j].example, -1)
 							}
 						}
+
+
+						//if (!valuefound) {
+						//	console.log("Couldn't find value "+fixedVariable)
+						//}
 
 						if (!valuefound && availableVariables.includes(fixedVariable)) {
 							var shouldbreak = false
@@ -713,46 +735,50 @@ const CodeEditor = (props) => {
 
 								for (var key in parsedPaths) {
 									const fullpath = "$"+actionlist[k].autocomplete.toLowerCase()+parsedPaths[key].autocomplete
-									if (fullpath === fixedVariable) {
-										//if (actionlist[k].example === undefined) {
-										//	actionlist[k].example = "TMP"
-										//}
+									if (fullpath !== fixedVariable) {
+										continue
+									}
 
-										var new_input = ""
-										try {
-											new_input = FindJsonPath(fullpath, actionlist[k].example)
-										} catch (e) {
-											console.log("ERR IN INPUT: ", e)
-										}
+									//if (actionlist[k].example === undefined) {
+									//	actionlist[k].example = "TMP"
+									//}
 
-										//console.log("Got output for: ", fullpath, new_input, actionlist[k].example, typeof new_input)
+									var new_input = ""
+									try {
+										new_input = FindJsonPath(fullpath, actionlist[k].example)
+									} catch (e) {
+										console.log("ERR IN INPUT: ", e)
+									}
 
-										if (typeof new_input === "object") {
-											new_input = JSON.stringify(new_input)
+									console.log("Got output for: ", fullpath, new_input, actionlist[k].example, typeof new_input)
+
+									if (typeof new_input === "object") {
+										new_input = JSON.stringify(new_input)
+									} else {
+										if (typeof new_input === "string") {
+											// Check if it contains any newlines, and replace them with raw newlines
+											new_input = fixStringInput(new_input)	
+
+											// Replace quotes with nothing
 										} else {
-											if (typeof new_input === "string") {
-												new_input = new_input
-											} else {
-												console.log("NO TYPE? ", typeof new_input)
-												try {
-													new_input = new_input.toString()
-												} catch (e) {
-													new_input = ""
-												}
+											console.log("NO TYPE? ", typeof new_input)
+											try {
+												new_input = new_input.toString()
+											} catch (e) {
+												new_input = ""
 											}
 										}
-
-										//console.log("FOUND2: ", fixedVariable, actionlist[j].example)
-										input = input.replace(fixedVariable, new_input, -1)
-										input = input.replace(found[i], new_input, -1)
-
-										//} catch (e) {
-										//	input = input.replace(found[i], actionlist[k].example)
-										//}
-
-										shouldbreak = true 
-										break
 									}
+
+									input = input.replace(fixedVariable, new_input, -1)
+									input = input.replace(found[i], new_input, -1)
+
+									//} catch (e) {
+									//	input = input.replace(found[i], actionlist[k].example)
+									//}
+
+									shouldbreak = true 
+									break
 								}
 
 								if (shouldbreak) {
@@ -765,7 +791,7 @@ const CodeEditor = (props) => {
 					}
 				}
 			} catch (e) {
-				//console.log("Outer replace error: ", e)
+				console.log("Outer replace error: ", e)
 			}
 		}
 
@@ -821,10 +847,6 @@ const CodeEditor = (props) => {
 	}
 
 	const executeSingleAction = (inputdata) => {
-		//if (serverside === true) {
-		//	return
-		//}
-	
 		if (validation === true) {
 			inputdata = JSON.stringify(inputdata)
 		}
@@ -832,7 +854,10 @@ const CodeEditor = (props) => {
 		// Gsoc2 Tools 1.2.0 (in most cases?)
 		const appid = toolsAppId !== undefined && toolsAppId !== null && toolsAppId.length > 0 ? toolsAppId : "3e2bdf9d5069fe3f4746c29d68785a6a"
 
-		const actiondata = {"description":"Repeats the call parameter","id":"","name":"repeat_back_to_me","label":"","node_type":"","environment":"","sharing":false,"private_id":"","public_id":"","app_id": appid,"tags":null,"authentication":[],"tested":false,"parameters":[{"description":"The message to repeat","id":"","name":"call","example":"REPEATING: Hello world","value":inputdata,"multiline":true,"options":null,"action_field":"","variant":"STATIC_VALUE","required":true,"configuration":false,"tags":null,"schema":{"type":"string"},"skip_multicheck":false,"value_replace":null,"unique_toggled":false,"autocompleted":false}],"execution_variable":{"description":"","id":"","name":"","value":""},"returns":{"description":"","example":"","id":"","schema":{"type":"string"}},"authentication_id":"","example":"","auth_not_required":false,"source_workflow":"","run_magic_output":false,"run_magic_input":false,"execution_delay":0,"app_name":"Gsoc2 Tools","app_version":"1.2.0","selectedAuthentication":{}}
+		const actionname = selectedAction.name === "execute_python" && !inputdata.replaceAll(" ", "").includes("{%python%}") ? "execute_python" : "repeat_back_to_me"
+		const params = actionname === "execute_python" ? [{"name": "code", "value":inputdata}] : [{"name":"call", "value": inputdata}]
+
+		const actiondata = {"description":"Repeats the call parameter","id":"","name":actionname,"label":"","node_type":"","environment":"","sharing":false,"private_id":"","public_id":"","app_id": appid,"tags":null,"authentication":[],"tested":false,"parameters": params, "execution_variable":{"description":"","id":"","name":"","value":""},"returns":{"description":"","example":"","id":"","schema":{"type":"string"}},"authentication_id":"","example":"","auth_not_required":false,"source_workflow":"","run_magic_output":false,"run_magic_input":false,"execution_delay":0,"app_name":"Gsoc2 Tools","app_version":"1.2.0","selectedAuthentication":{}}
 
 		setExecutionResult({
 			"valid": false,		
@@ -863,12 +888,12 @@ const CodeEditor = (props) => {
 			var newResult = {}
 			if (responseJson.success === true && responseJson.result !== null && responseJson.result !== undefined && responseJson.result.length > 0) {
 				const result = responseJson.result.slice(0, 50)+"..."
-				//alert.info("SUCCESS: "+result)
+				//toast("SUCCESS: "+result)
 
 				const validate = validateJson(responseJson.result)
 				newResult = validate
 			} else if (responseJson.success === false && responseJson.reason !== undefined && responseJson.reason !== null) {
-				alert.error(responseJson.reason)
+				toast(responseJson.reason)
 				newResult = {"valid": false, "result": responseJson.reason}
 			} else if (responseJson.success === true) {
 				newResult = {"valid": false, "result": "Couldn't finish execution. Please fill all the required fields, and retry the execution."}
@@ -884,7 +909,7 @@ const CodeEditor = (props) => {
 			setExecuting(false)
 		})
 		.catch(error => {
-			//alert.error("Execution error: "+error.toString())
+			//toast("Execution error: "+error.toString())
 			console.log("error: ", error)
 			setExecuting(false)
 		})
@@ -895,7 +920,7 @@ const CodeEditor = (props) => {
 			aria-labelledby="draggable-code-modal"
 			disableBackdropClick={true}
 			disableEnforceFocus={true}
-      //style={{ pointerEvents: "none" }}
+      		//style={{ pointerEvents: "none" }}
 			hideBackdrop={true}
 			open={expansionModalOpen}
 			onClose={() => {
@@ -919,10 +944,23 @@ const CodeEditor = (props) => {
 					maxHeight: isMobile ? "100%" : 720,
 					border: theme.palette.defaultBorder,
 					padding: isMobile ? "25px 10px 25px 10px" : 25,
-					backgroundColor: theme.palette.surfaceColor,
 				},
 			}}
 		>
+		  <IconButton
+			style={{
+			  zIndex: 5000,
+			  position: "absolute",
+			  top: 14,
+			  right: 18,
+			  color: "grey",
+			}}
+			onClick={() => {
+				setExpansionModalOpen(false)
+			}}
+		  >
+			<CloseIcon />
+		  </IconButton>
 			<div style={{display: "flex"}}>
 				<div style={{flex: 1, }}>
 					{ isFileEditor ? 
@@ -951,6 +989,7 @@ const CodeEditor = (props) => {
 						}}
 					>
 						<div style={{display: "flex"}}>
+							{/*
 							<DialogTitle
 								id="draggable-dialog-title"
 								style={{
@@ -961,67 +1000,18 @@ const CodeEditor = (props) => {
 							>
 									Code Editor
 							</DialogTitle>
-							<IconButton
-								style={{
-									marginLeft: isMobile ? "80%" : 350, 
-									height: 50, 
-									width: 50, 
-								}}
-								onClick={() => {
-									
-								}}
-							>
-								<Tooltip
-									color="primary"
-									title={"Test Liquid in the playground"}
-									placement="top"
-								>
-									<a 
-										href="https://pwwang.github.io/liquidpy/playground/"
-										rel="norefferer"
-      		          target="_blank"
-									>
-										<ExtensionIcon style={{color: "rgba(255,255,255,0.7)"}}/>
-									</a>
-								</Tooltip>
-							</IconButton>
-							<IconButton
-								style={{
-									height: 50, 
-									width: 50, 
-								}}
-								disabled={isAiLoading}
-								onClick={() => {
-									autoFormat(localcodedata) 
-								}}
-							>
-								<Tooltip
-									color="primary"
-									title={"Auto format data"}
-									placement="top"
-								>
-									{isAiLoading ? 
-										<CircularProgress style={{height: 20, width: 20, color: "rgba(255,255,255,0.7)"}}/>
-										:
-										<AutoFixHighIcon style={{color: "rgba(255,255,255,0.7)"}}/>
-									}
-								</Tooltip>
-							</IconButton>
-						</div>
-					</div>   
-					}
-
-		
+							*/}
 					{ isFileEditor ? null :
-					<div style={{display: "flex"}}>
+					<div style={{display: "flex", maxHeight: 40, }}>
 						<Button
 							id="basic-button"
 							aria-haspopup="true"
 							aria-controls={liquidOpen ? 'basic-menu' : undefined}
 							aria-expanded={liquidOpen ? 'true' : undefined}
 							variant="outlined"
+							color="secondary"
 							style={{
-							  textTransform: "none",
+							  	textTransform: "none",
 								width: 100, 
 							}}
 							onClick={(event) => {
@@ -1055,6 +1045,7 @@ const CodeEditor = (props) => {
 							aria-controls={mathOpen ? 'basic-menu' : undefined}
 							aria-expanded={mathOpen ? 'true' : undefined}
 							variant="outlined"
+							color="secondary"
 							style={{
 							  textTransform: "none",
 								width: 100, 
@@ -1090,6 +1081,7 @@ const CodeEditor = (props) => {
 							aria-controls={pythonOpen ? 'basic-menu' : undefined}
 							aria-expanded={pythonOpen ? 'true' : undefined}
 							variant="outlined"
+							color="secondary"
 							style={{
 							  textTransform: "none",
 								width: 100, 
@@ -1125,10 +1117,11 @@ const CodeEditor = (props) => {
 							aria-controls={!!menuPosition ? 'basic-menu' : undefined}
 							aria-expanded={!!menuPosition ? 'true' : undefined}
 							variant="outlined"
+							color="secondary"
 							style={{
-							  textTransform: "none",
+							  	textTransform: "none",
 								width: 130, 
-								marginLeft: 170, 
+								marginLeft: 20, 
 							}}
 							onClick={(event) => {
 								setMenuPosition({
@@ -1376,52 +1369,105 @@ const CodeEditor = (props) => {
 						</Menu>
 					</div> 
 					}
-					<span style={{
+							<IconButton
+								style={{
+									marginLeft: isMobile ? "80%" : 30, 
+									height: 50, 
+									width: 50, 
+								}}
+								onClick={() => {
+									
+								}}
+							>
+								<Tooltip
+									color="primary"
+									title={"Test Liquid in the playground"}
+									placement="top"
+								>
+									<a 
+										href="https://pwwang.github.io/liquidpy/playground/"
+										rel="norefferer"
+      		          target="_blank"
+									>
+										<ExtensionIcon style={{color: "rgba(255,255,255,0.7)"}}/>
+									</a>
+								</Tooltip>
+							</IconButton>
+							<IconButton
+								style={{
+									height: 50, 
+									width: 50, 
+								}}
+								disabled={isAiLoading}
+								onClick={() => {
+									autoFormat(localcodedata) 
+								}}
+							>
+								<Tooltip
+									color="primary"
+									title={"Auto format data"}
+									placement="top"
+								>
+									{isAiLoading ? 
+										<CircularProgress style={{height: 20, width: 20, color: "rgba(255,255,255,0.7)"}}/>
+										:
+										<AutoFixHighIcon style={{color: "rgba(255,255,255,0.7)"}}/>
+									}
+								</Tooltip>
+							</IconButton>
+						</div>
+					</div>   
+					}
+
+		
+					
+					<div style={{
 						borderRadius: theme.palette.borderRadius,
 						position: "relative",
+						paddingTop: 0, 
+						minHeight: 548,
+						overflow: "hidden",
 					}}>
 						<CodeMirror
-							value = {localcodedata}
-							height={isFileEditor ? 450 : 525} 
+						    theme={vscodeDark}
+							value={localcodedata}
+							height={isFileEditor ? 450 : 500} 
 							width={isFileEditor ? 650 : 600}
 							style={{
-								maxWidth: isFileEditor ? 450 : 500,
+								maxWidth: isFileEditor ? 450 : 600,
+								maxHeight: 548,
+								minHeight: 548, 
 								wordBreak: "break-word",
 								marginTop: 0,
-								paddingTop: 0,
+								paddingBottom: 10,
+								overflow: "hidden",
 							}}
 							onCursorActivity = {(value) => {
-								// console.log(value.getCursor())
+								console.log("CURSOR: ", value.getCursor())
 								setCurrentCharacter(value.getCursor().ch)
 								setCurrentLine(value.getCursor().line)
 								// console.log(value.getCursor().ch, value.getCursor().line)
 								findIndex(value.getCursor().line, value.getCursor().ch)
+
 								highlight_variables(value)
 							}}
-							onChange={(value) => {
-								//console.log("Value: '", value.getValue(), "'")
+							onChange={(value, viewUpdate) => {
+								setlocalcodedata(value)
+								expectedOutput(value)
 
-								setlocalcodedata(value.getValue())
-								expectedOutput(value.getValue())
+								highlight_variables(value)
 
-								if(value.display.input.prevInput.startsWith('$') || value.display.input.prevInput.endsWith('$')){
-									setEditorPopupOpen(true)
-								}
-
-								// console.log(findIndex(value.getValue()))
-								// highlight_variables(value)
+								//if(value.display.input.prevInput.startsWith('$') || value.display.input.prevInput.endsWith('$')){
+								//	setEditorPopupOpen(true)
+								//}
 							}}
-							extensions={[indentWithTab]}
 							options={{
-								styleSelectedText: true,
-								theme: codeTheme,
-								keyMap: 'sublime',
 								mode: validation === true ? "json" : "python",
 								lineWrapping: linewrap,
-
+								theme: vscodeDark,
 							}}
 						/>
-					</span>
+					</div>
 
 					{/*editorPopupOpen ?
 						<Paper
@@ -1536,13 +1582,14 @@ const CodeEditor = (props) => {
 					</div>
 				</div>
 
-				<div style={{flex: 1, marginLeft: 25, }}>
+				<div style={{flex: 1, marginLeft: 5, borderLeft: "1px solid rgba(255,255,255,0.3)", paddingLeft: 5, }}>
 					{isFileEditor ? null : 
 						<div>
 							{isMobile ? null : 
 								<DialogTitle
 									style={{
 										paddingLeft: 10, 
+										paddingTop: 0, 
 										display: "flex", 
 									}}
 								>
@@ -1550,14 +1597,29 @@ const CodeEditor = (props) => {
 										Expected Output
 									</span>
 
-									<IconButton disabled={executing} color="primary" style={{border: `1px solid ${theme.palette.primary.main}`, marginLeft: 100, padding: 8}} variant="contained" onClick={() => {
-										executeSingleAction(expOutput)
-									}}>
-										<Tooltip title="Try it! This runs the Gsoc2 Tools 'repeat back to me' action with what you see in the expected output window. Commonly used to test your Python scripts or Liquid filters, not requiring the full workflow to run again." placement="top">
-											{executing ? <CircularProgress style={{height: 18, width: 18, }} /> : <PlayArrowIcon style={{height: 18, width: 18, }} /> }
-														 
-										</Tooltip>
-									</IconButton>
+									<Tooltip title="Try it! This runs the Gsoc2 Tools 'repeat back to me' or 'execute python' action with what you see in the expected output window. Commonly used to test your Python scripts or Liquid filters, not requiring the full workflow to run again." placement="top">
+										<Button 
+											variant="outlined" 
+											disabled={executing} 
+											color="primary" 
+											style={{
+												border: `1px solid ${theme.palette.primary.main}`, 
+												marginLeft: 200, 
+												maxHeight: 35, 
+												minWidth: 70, 
+											}} 
+											variant="contained" 
+											onClick={() => {
+												executeSingleAction(expOutput)
+											}}
+										>
+											{executing ? 
+												<CircularProgress style={{height: 18, width: 18, }} /> 
+													: 						
+												<span>Try it <PlayArrowIcon style={{height: 18, width: 18, marginBottom: -4, marginLeft: 5,  }} /> </span>
+											}
+										</Button>
+									</Tooltip>
 
 								</DialogTitle>
 							}
@@ -1599,8 +1661,8 @@ const CodeEditor = (props) => {
 											borderRadius: theme.palette.borderRadius,
 											maxHeight: 500,
 											minHeight: 500, 
-											minWidth: 500,
-											maxWidth: 500,
+											minWidth: 580,
+											maxWidth: 580,
 											overflow: "auto", 
 											whiteSpace: "pre-wrap",
 										}}
@@ -1664,34 +1726,29 @@ const CodeEditor = (props) => {
 
 
 			<div style={{display: 'flex',}}>
-				<button
+				<Button
 					style={{
-						color: "white",
-						background: "#383b49",
-						border: "none",
 						height: 35,
 						flex: 1,
 						marginLeft: 5,
 						marginTop: 5,
-						cursor: "pointer"
 					}}
+					variant="outlined"
+					color="secondary"
 					onClick={() => {
 						setExpansionModalOpen(false);
 					}}
 				>
 					Cancel
-				</button>
-				<button
+				</Button>
+				<Button
+					variant="contained"
+					color="primary"
 					style={{
-						color: "white",
-						background: "#f85a3e",
-						border: "none",
-
 						height: 35,
 						flex: 1, 
 						marginLeft: 10,
 						marginTop: 5,
-						cursor: "pointer"
 					}}
 					onClick={(event) => {
 						// Take localcodedata through the Gsoc2 JSON parser just in case
@@ -1709,15 +1766,26 @@ const CodeEditor = (props) => {
 							runUpdateText(fixedcodedata);
 							setcodedata(fixedcodedata);
 							setExpansionModalOpen(false)
-						} else {
-							changeActionParameterCodeMirror(event, fieldCount, fixedcodedata)
+						} else if (changeActionParameterCodeMirror !== undefined) { 
+							//changeActionParameterCodeMirror(event, fieldCount, fixedcodedata)
+							changeActionParameterCodeMirror(event, fieldCount, fixedcodedata, actionlist)
 							setExpansionModalOpen(false)
 							setcodedata(fixedcodedata)
 						}
+
+						// Check if fieldname is set, and try to find and inject the text
+						if (fieldname !== undefined && fieldname !== null && fieldname.length > 0) {
+							const foundfield = document.getElementById(fieldname)
+							if (foundfield !== undefined && foundfield !== null) {
+								foundfield.value = fixedcodedata
+							}
+						}
+
+						setExpansionModalOpen(false)
 					}}
 				>
 					Submit	
-				</button>
+				</Button>
 			</div>
 		</Dialog>)
 }

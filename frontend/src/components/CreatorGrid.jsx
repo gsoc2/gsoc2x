@@ -1,10 +1,16 @@
 import React, { useEffect, useState } from 'react';
 
 import ReactGA from 'react-ga4';
-import { useTheme } from '@material-ui/core/styles';
 import {Link} from 'react-router-dom';
+import theme from '../theme.jsx';
+import { removeQuery } from '../components/ScrollToTop.jsx';
 
-import { Search as SearchIcon, CloudQueue as CloudQueueIcon, Code as CodeIcon } from '@material-ui/icons';
+import { 
+	SkipNext as SkipNextIcon,
+	SkipPrevious as SkipPreviousIcon,
+	PlayArrow as PlayArrowIcon,
+	VerifiedUser as VerifiedUserIcon, 
+	Search as SearchIcon, CloudQueue as CloudQueueIcon, Code as CodeIcon } from '@mui/icons-material';
 
 import algoliasearch from 'algoliasearch/lite';
 import { InstantSearch, Configure, connectSearchBox, connectHits } from 'react-instantsearch-dom';
@@ -24,27 +30,18 @@ import {
 	Zoom,
 	CardMedia,
 	CardActionArea,
-} from '@material-ui/core';
+} from '@mui/material';
 
 import {
 	Avatar,
   AvatarGroup,
 } from "@mui/material"
 
-import {
-	SkipNext as SkipNextIcon,
-	SkipPrevious as SkipPreviousIcon,
-	PlayArrow as PlayArrowIcon,
-	VerifiedUser as VerifiedUserIcon, 
-} from "@material-ui/icons";
-
-
 const searchClient = algoliasearch("JNSS5CFDZZ", "db08e40265e2941b9a7d8f644b6e5240")
 const CreatorGrid = props => {
-	const { maxRows, showName, showSuggestion, isMobile, globalUrl, parsedXs }  = props
+	const { maxRows, showName, showSuggestion, isMobile, globalUrl, parsedXs, isHeader }  = props
 	const rowHandler = maxRows === undefined || maxRows === null ? 50 : maxRows
 	const xs = parsedXs === undefined || parsedXs === null ? isMobile ? 6 : 4 : parsedXs
-	const theme = useTheme();
 	//const [apps, setApps] = React.useState([]);
 	//const [filteredApps, setFilteredApps] = React.useState([]);
 	const [formMail, setFormMail] = React.useState("");
@@ -55,7 +52,7 @@ const CreatorGrid = props => {
 
 	const isCloud =
 		window.location.host === "localhost:3002" ||
-		window.location.host === "soc2.khulnasoft.com";
+		window.location.host === "gsoc2r.io";
 
 	const innerColor = "rgba(255,255,255,0.65)"
 	const borderRadius = 3
@@ -72,7 +69,7 @@ const CreatorGrid = props => {
 			"message": message,
 		}
 	
-		const errorMessage = "Something went wrong. Please contact gsoc2@soc2.khulnasoft.com directly."
+		const errorMessage = "Something went wrong. Please contact gsoc2@gsoc2r.io directly."
 
 		fetch(globalUrl+"/api/v1/contact", {
 			method: 'POST',
@@ -85,7 +82,7 @@ const CreatorGrid = props => {
 		.then(response => {
 			if (response.success === true) {
 				setFormMessage(response.reason)
-				//alert.info("Thanks for submitting!")
+				//toast("Thanks for submitting!")
 			} else {
 				setFormMessage(errorMessage)
 			}
@@ -101,20 +98,21 @@ const CreatorGrid = props => {
 
 	// value={currentRefinement}
 	const SearchBox = ({currentRefinement, refine, isSearchStalled} ) => {
-		useEffect(() => {
-			if (window !== undefined && window.location !== undefined && window.location.search !== undefined && window.location.search !== null) {
-				const urlSearchParams = new URLSearchParams(window.location.search)
-				const params = Object.fromEntries(urlSearchParams.entries())
-				const foundQuery = params["q"]
-				if (foundQuery !== null && foundQuery !== undefined) {
-					refine(foundQuery)
-				}
+		var defaultSearch = ""
+		if (window !== undefined && window.location !== undefined && window.location.search !== undefined && window.location.search !== null) {
+			const urlSearchParams = new URLSearchParams(window.location.search)
+			const params = Object.fromEntries(urlSearchParams.entries())
+			const foundQuery = params["q"]
+			if (foundQuery !== null && foundQuery !== undefined) {
+				refine(foundQuery)
+				defaultSearch = foundQuery
 			}
-		}, [])
+		}
 
 		return (
 		  <form noValidate action="" role="search">
 				<TextField 
+					defaultValue={defaultSearch}
 					fullWidth
 					style={{backgroundColor: theme.palette.inputColor, borderRadius: borderRadius, margin: 10, width: "100%",}} 
 					InputProps={{
@@ -132,10 +130,10 @@ const CreatorGrid = props => {
 					autoComplete='off'
 					type="search"
 					color="primary"
-					value={currentRefinement}
 					placeholder="Find Creators..."
 					id="gsoc2_search_field"
 					onChange={(event) => {
+						removeQuery("q")
 						refine(event.currentTarget.value)
 					}}
 				/>
@@ -163,11 +161,11 @@ const CreatorGrid = props => {
 					}
 
 					counted += 1
-					const creatorUrl = !isCloud ? `https://soc2.khulnasoft.com/creators/${data.username}` : `/creators/${data.username}`
+					const creatorUrl = !isCloud ? `https://gsoc2r.io/creators/${data.username}` : `/creators/${data.username}`
 
 					return (
 						<Zoom key={index} in={true} style={{}}>
-							<Grid item xs={xs} style={{ padding: "12px 10px 12px 10px", }}>
+							<Grid item xs={xs} style={{ padding: isHeader ? null : "12px 10px 12px 10px", }}>
 								<Card style={{border: "1px solid rgba(255,255,255,0.3)", minHeight: 177, maxHeight: 177,}}>
 									<a href={creatorUrl} rel="noopener noreferrer" target={isCloud ? "" : "_blank"} style={{textDecoration: "none", color: "inherit",}}>
 						  			<CardActionArea style={{padding: "5px 10px 5px 10px", minHeight: 177, maxHeight: 177,}}>

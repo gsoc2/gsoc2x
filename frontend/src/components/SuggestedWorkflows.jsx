@@ -13,7 +13,7 @@ import {
   CircularProgress,
 	Tooltip,
 	Dialog,
-} from "@material-ui/core";
+} from "@mui/material";
 
 import {
 	Close as CloseIcon,
@@ -33,7 +33,7 @@ const SuggestedWorkflows = (props) => {
 
   const isCloud =
     window.location.host === "localhost:3002" ||
-    window.location.host === "soc2.khulnasoft.com";
+    window.location.host === "gsoc2r.io";
 
 
 	useEffect(() => {

@@ -1,16 +1,14 @@
 import React, { useState, useEffect } from "react";
 
-import { makeStyles } from "@material-ui/styles";
+import theme from "../theme.jsx";
+import { makeStyles } from "@mui/styles";
+
 import { useNavigate, Link } from "react-router-dom";
 import countries from "../components/Countries.jsx";
 import CodeEditor from "../components/Gsoc2CodeEditor.jsx";
 import getLocalCodeData from "../components/Gsoc2CodeEditor.jsx";
 import CacheView from "../components/CacheView.jsx";
-import theme from "../theme.jsx";
-import AddIcon from "@mui/icons-material/Add";
-import ClearIcon from '@mui/icons-material/Clear';
-import StorageIcon from '@mui/icons-material/Storage';
-//import ToggleButton from '@mui/material/ToggleButton';
+
 import {
   FormControl,
   InputLabel,
@@ -18,6 +16,7 @@ import {
   OutlinedInput,
   Checkbox,
   Card,
+  Chip,
   Tooltip,
   FormControlLabel,
   Typography,
@@ -45,19 +44,21 @@ import {
   DialogContent,
   CircularProgress,
   Box,
-	InputAdornment,
-} from "@material-ui/core";
-
-import { Autocomplete } from "@mui/material";
+  InputAdornment,
+  Autocomplete 
+} from "@mui/material";
 
 import {
+  Add as AddIcon,
+  Clear as ClearIcon,
+  Storage as StorageIcon,
   Edit as EditIcon,
   FileCopy as FileCopyIcon,
   SelectAll as SelectAllIcon,
   OpenInNew as OpenInNewIcon,
   CloudDownload as CloudDownloadIcon,
   Description as DescriptionIcon,
-  Polymer as PolymerIcon,
+  Polyline as PolylineIcon,
   CheckCircle as CheckCircleIcon,
   Close as CloseIcon,
   Apps as AppsIcon,
@@ -66,15 +67,17 @@ import {
   Cached as CachedIcon,
   AccessibilityNew as AccessibilityNewIcon,
   Lock as LockIcon,
-  Eco as EcoIcon,
   Schedule as ScheduleIcon,
   Cloud as CloudIcon,
   Business as BusinessIcon,
-	Visibility as VisibilityIcon,
-	VisibilityOff as VisibilityOffIcon,
-} from "@material-ui/icons";
+  Visibility as VisibilityIcon,
+  VisibilityOff as VisibilityOffIcon,
 
-import { useAlert } from "react-alert";
+  FmdGood as FmdGoodIcon,
+} from "@mui/icons-material";
+
+//import { useAlert
+import { ToastContainer, toast } from "react-toastify" 
 import Dropzone from "../components/Dropzone.jsx";
 import HandlePaymentNew from "../views/HandlePaymentNew.jsx";
 import OrgHeader from "../components/OrgHeader.jsx";
@@ -131,7 +134,7 @@ const FileCategoryInput = (props) => {
 
 
 const Admin = (props) => {
-  const { globalUrl, userdata, serverside, checkLogin } = props;
+  const { globalUrl, userdata, serverside, checkLogin, notifications, setNotifications,  } = props;
 
   var to_be_copied = "";
   const classes = useStyles();
@@ -183,13 +186,18 @@ const Admin = (props) => {
 	const [selectedStatus, setSelectedStatus] = React.useState([]);
 
   useEffect(() => {
+		getUsers()
+  }, []);
+
+
+  useEffect(() => {
     if (isDropzone) {
       //redirectOpenApi();
       setIsDropzone(false);
     }
   }, [isDropzone]);
 
-  const isCloud = window.location.host === "localhost:3002" || window.location.host === "soc2.khulnasoft.com";
+  const isCloud = window.location.host === "localhost:3002" || window.location.host === "gsoc2r.io";
 
   const get2faCode = (userId) => {
     fetch(`${globalUrl}/api/v1/users/${userId}/get2fa`, {
@@ -210,13 +218,13 @@ const Admin = (props) => {
       .then((responseJson) => {
         //console.log("RESPONSE: ", responseJson)
         if (responseJson.success === true) {
-          //alert.info(responseJson.reason)
+          //toast(responseJson.reason)
           setImage2FA(responseJson.reason);
           setSecret2FA(responseJson.extra);
         }
       })
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
       });
   };
 
@@ -250,7 +258,7 @@ const Admin = (props) => {
         //}
       })
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
       });
   };
 
@@ -281,19 +289,20 @@ const Admin = (props) => {
 	]
 	*/
 
-  const alert = useAlert();
+  	//const alert = useAlert();
 	const handleStatusChange = (event) => {
 		const { value } = event.target;
-
 		setSelectedStatus(value);
-  	handleEditOrg(
+
+		
+		handleEditOrg(
 			"",
 			"",
 			selectedOrganization.id,
 			"",
 			{},
 			{},
-			value,
+			value.length === 0 ? ["none"] : value,
 		)	
 	}
 
@@ -321,77 +330,76 @@ const Admin = (props) => {
 		var your_apps = "- Connecting "
 
 		var subject_add = 0
-		var subject = "Want to automate "
+		var subject = "POC to automate "
 
 		if (org.security_framework !== undefined && org.security_framework !== null) {
 			if (org.security_framework.cases.name !== undefined && org.security_framework.cases.name !== null && org.security_framework.cases.name !== "") {
-				your_apps += org.security_framework.cases.name.replace("_", " ", -1) + ", "
+				your_apps += org.security_framework.cases.name.replace("_", " ", -1).replace(" API", "", -1) + ", "
 
 				if (subject_add < 2) {
 					if (subject_add === 1) {
-						subject += " & "
+						subject += " and "
 					}
 
 					subject_add += 1 
-					subject += org.security_framework.cases.name.replace("_", " ", -1) 
+					subject += org.security_framework.cases.name.replace("_", " ", -1).replace(" API", "", -1) 
 				}
 			}
 
 			if (org.security_framework.siem.name !== undefined && org.security_framework.siem.name !== null && org.security_framework.siem.name !== "") {
-				your_apps += org.security_framework.siem.name.replace("_", " ", -1) + ", "
-
+				your_apps += org.security_framework.siem.name.replace("_", " ", -1).replace(" API", "", -1) + ", "
 				if (subject_add < 2) {
 					if (subject_add === 1) {
-						subject += " & "
+						subject += " and "
 					}
 
 					subject_add += 1 
-					subject += org.security_framework.siem.name.replace("_", " ", -1)
+					subject += org.security_framework.siem.name.replace("_", " ", -1).replace(" API", "", -1)
 				}
 			}
 
 			if (org.security_framework.communication.name !== undefined && org.security_framework.communication.name !== null && org.security_framework.communication.name !== "") {
-				your_apps += org.security_framework.communication.name.replace("_", " ", -1) + ", "
+				your_apps += org.security_framework.communication.name.replace("_", " ", -1).replace(" API", "", -1) + ", "
 
 				if (subject_add < 2) {
 					if (subject_add === 1) {
-						subject += " & "
+						subject += " and "
 					}
 
 					subject_add += 1 
-					subject += org.security_framework.communication.name.replace("_", " ", -1)
+					subject += org.security_framework.communication.name.replace("_", " ", -1).replace(" API", "", -1)
 				}
 			}
 
 			if (org.security_framework.edr.name !== undefined && org.security_framework.edr.name !== null && org.security_framework.edr.name !== "") {
-				your_apps += org.security_framework.edr.name.replace("_", " ", -1) + ", "
+				your_apps += org.security_framework.edr.name.replace("_", " ", -1).replace(" API", "", -1) + ", "
 
 				if (subject_add < 2) {
 					if (subject_add === 1) {
-						subject += " & "
+						subject += " and "
 					}
 
 					subject_add += 1 
-					subject += org.security_framework.edr.name.replace("_", " ", -1)
+					subject += org.security_framework.edr.name.replace("_", " ", -1).replace(" API", "", -1)
 				}
 			}
 
 			if (org.security_framework.intel.name !== undefined && org.security_framework.intel.name !== null && org.security_framework.intel.name !== "") {
-				your_apps += org.security_framework.intel.name.replace("_", " ", -1) + ", "
+				your_apps += org.security_framework.intel.name.replace("_", " ", -1).replace(" API", "", -1) + ", "
 
 				if (subject_add < 2) {
 					if (subject_add === 1) {
-						subject += " & "
+						subject += " and "
 					}
 
 					subject_add += 1 
-					subject += org.security_framework.intel.name.replace("_", " ", -1)
+					subject += org.security_framework.intel.name.replace("_", " ", -1).replace(" API", "", -1)
 				}
 			}
 
 
 			// Remove comma
-			subject += "?"
+			//subject += "?"
 			your_apps = your_apps.substring(0, your_apps.length - 2)
 		}
 
@@ -423,11 +431,24 @@ const Admin = (props) => {
 		var admins = "" 
 
 		// Loop users
+		var lastLogin = 0
 		for (var i = 0; i < users.length; i++) {
+			if (users[i].username.includes("gsoc2r")) {
+				continue
+			}
+
 			if (users[i].role === "admin") {
 				admins += users[i].username + ","
 			}
+
+			const data = users[i]
+			for (var i = 0; i < data.login_info.length; i++) {
+				if (data.login_info[i].timestamp > lastLogin) {
+					lastLogin = data.login_info[i].timestamp
+				}
+			}
 		}
+
 
 		// Remove last comma
 		admins = admins.substring(0, admins.length - 1)
@@ -443,21 +464,38 @@ const Admin = (props) => {
 		// Get drift username from userdata.username before @ in email
 		const username = userdata.username.substring(0, userdata.username.indexOf("@"))
 
-		var body = `Hey,%0D%0A%0D%0AI saw you trying to use Gsoc2, and thought we may be able to help. Right now, it looks like you have ${workflow_amount} workflows made, but it still doesn't look like you are getting the most out of Gsoc2. If you're interested, I'd love to set up a quick call to see if we can help you get more out of Gsoc2. %0D%0A%0D%0A
+		// Check if timestamp is more than 2 weeks ago and add "a while back" to the message
+		const timeComparison = 1209600
+		const extra_timestamp_text = lastLogin === 0 ? 0 : (Date.now()/1000 - lastLogin) > timeComparison ? " a while back" : ""
+		console.log("LAST LOGIN: " + lastLogin, extra_timestamp_text)
+
+		// Check if cloud sync is active, and if so, add a message about it
+		const cloudSyncInfo = selectedOrganization.cloud_sync === true ? "- Scale your onprem installation" : ""
+
+		var body = `Hey,%0D%0A%0D%0AI noticed you tried to use Gsoc2${extra_timestamp_text}, and thought you may be interested in a POC. It looks like you have ${workflow_amount} workflows made, but it still doesn't look like you are getting what you wanted out of  Gsoc2. If you're interested, I'd love to set up a quick call to see if we can help you get more out of Gsoc2. %0D%0A%0D%0A
 
 Some of the things we can help with:%0D%0A
 ${your_apps}
 - Configuring and authenticating your apps%0D%0A
 ${usecases}
-- Creating special usecases and apps%0D%0A%0D%0A
+- Multi-Tenancy and creating special usecases%0D%0A
+${cloudSyncInfo}%0D%0A
 
-Let me know if you're interested, or set up a call here: https://drift.me/${username}`
+If you're interested, please let me know a time that works for you, or set up a call here: https://drift.me/${username}`
 
-		return `mailto:${admins}?bcc=gsoc2@soc2.khulnasoft.com&subject=${subject}&body=${body}`
+		return `mailto:${admins}?bcc=gsoc2@gsoc2r.io,binu@gsoc2r.io&subject=${subject}&body=${body}`
 	}
 
+
+  const changeDistribution = (data) => {
+	//changeDistributed(data, !isDistributed)
+	console.log("Should change distribution to be shared among suborgs")
+  
+    editAuthenticationConfig(data.id, "suborg_distribute") 
+  }
+
   const deleteAuthentication = (data) => {
-    alert.info("Deleting auth " + data.label);
+    toast("Deleting auth " + data.label);
 
     // Just use this one?
     const url = globalUrl + "/api/v1/apps/authentication/" + data.id;
@@ -471,14 +509,14 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
     })
       .then((response) =>
         response.json().then((responseJson) => {
-          if (responseJson["success"] === false) {
-            alert.error("Failed deleting auth");
+          if (responseJson.success === false) {
+            toast("Failed deleting auth");
           } else {
             // Need to wait because query in ES is too fast
             setTimeout(() => {
               getAppAuthentication();
             }, 1000);
-            //alert.success("Successfully deleted authentication!")
+            //toast("Successfully deleted authentication!")
           }
         })
       )
@@ -510,12 +548,12 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
         response.json().then((responseJson) => {
           console.log("RESP: ", responseJson);
           if (responseJson["success"] === false) {
-            alert.error("Failed stopping schedule");
+            toast("Failed stopping schedule");
           } else {
             setTimeout(() => {
               getSchedules();
             }, 1500);
-            //alert.success("Successfully stopped schedule!")
+            //toast("Successfully stopped schedule!")
           }
         })
       )
@@ -526,7 +564,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
 
 
 	if (userdata.support === true && selectedOrganization.id !== "" && selectedOrganization.id !== undefined && selectedOrganization.id !== null && selectedOrganization.id !== userdata.active_org.id) {
-		alert.info("Refreshing window to fix org support access")
+		toast("Refreshing window to fix org support access")
 		window.location.reload()
 		return null
 	}
@@ -551,15 +589,15 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
       .then((response) => {
         if (response.status === 200) {
         } else {
-          //alert.info("Wrong code sent.")
-          //alert.info("Wrong code sent. Please try again.")
+          //toast("Wrong code sent.")
+          //toast("Wrong code sent. Please try again.")
         }
 
         return response.json();
       })
       .then((responseJson) => {
         if (responseJson.success === true) {
-          alert.info("Successfully enabled 2fa");
+          toast("Successfully enabled 2fa");
 
           setTimeout(() => {
             getUsers();
@@ -571,19 +609,19 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
             setSelectedUserModalOpen(false);
           }, 1000);
         } else {
-          alert.info("Wrong code sent. Please try again.");
-          //alert.error("Failed setting 2fa: ", responseJson.reason)
+          toast("Wrong code sent. Please try again.");
+          //toast("Failed setting 2fa: ", responseJson.reason)
         }
       })
       .catch((error) => {
-        alert.info("Wrong code sent. Please try again.");
-        //alert.error("Err: " + error.toString())
+        toast("Wrong code sent. Please try again.");
+        //toast("Err: " + error.toString())
       });
   };
 
   const handleStopOrgSync = (org_id) => {
     if (org_id === undefined || org_id === null) {
-      alert.error("Couldn't get org " + org_id);
+      toast("Couldn't get org " + org_id);
       return;
     }
 
@@ -604,10 +642,10 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
       .then((response) => {
         if (response.status === 200) {
           console.log("Cloud sync success?");
-          alert.success("Successfully stopped cloud sync");
+          toast("Successfully stopped cloud sync");
         } else {
           console.log("Cloud sync fail?");
-          alert.error(
+          toast(
             "Failed stopping sync. Try again, and contact support if this persists."
           );
         }
@@ -620,7 +658,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
         }, 1000);
       })
       .catch((error) => {
-        alert.error("Err: " + error.toString());
+        toast("Err: " + error.toString());
       });
   };
 
@@ -664,16 +702,16 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
           responseJson.reason !== undefined
         ) {
           setOrgSyncResponse(responseJson.reason);
-          alert.error("Failed to handle sync: " + responseJson.reason);
+          toast("Failed to handle sync: " + responseJson.reason);
         } else if (!responseJson.success) {
-          alert.error("Failed to handle sync.");
+          toast("Failed to handle sync.");
         } else {
           getOrgs();
           if (disableSync) {
-            alert.success("Successfully disabled sync!");
+            toast("Successfully disabled sync!");
             setOrgSyncResponse("Successfully disabled syncronization");
           } else {
-            alert.success("Cloud Syncronization successfully set up!");
+            toast("Cloud Syncronization successfully set up!");
             setOrgSyncResponse(
               "Successfully started syncronization. Cloud features you now have access to can be seen below."
             );
@@ -688,7 +726,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
       })
       .catch((error) => {
         setLoading(false);
-        alert.error("Err: " + error.toString());
+        toast("Err: " + error.toString());
       });
   };
 
@@ -710,16 +748,16 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
       .then((response) =>
         response.json().then((responseJson) => {
           if (responseJson["success"] === false) {
-            alert.error("Failed changing authentication");
+            toast("Failed changing authentication");
           } else {
-            //alert.success("Successfully password!")
+            //toast("Successfully password!")
             setSelectedUserModalOpen(false);
             getAppAuthentication();
           }
         })
       )
       .catch((error) => {
-        alert.error("Err: " + error.toString());
+        toast("Err: " + error.toString());
       });
   };
 
@@ -740,7 +778,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
       image: image,
       defaults: defaults,
       sso_config: sso_config,
-			lead_info: lead_info,
+	  lead_info: lead_info,
     };
 
     const url = globalUrl + `/api/v1/orgs/${selectedOrganization.id}`;
@@ -758,23 +796,23 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
       .then((response) =>
         response.json().then((responseJson) => {
           if (responseJson["success"] === false) {
-            alert.error("Failed updating org: ", responseJson.reason);
+            toast("Failed updating org: ", responseJson.reason);
           } else {
 						if (lead_info === undefined || lead_info === null || lead_info === []) {
-            	alert.success("Successfully edited org!");
+            	toast("Successfully edited org!");
 						}
           }
         })
       )
       .catch((error) => {
-        alert.error("Err: " + error.toString());
+        toast("Err: " + error.toString());
       });
   };
 
-  const editAuthenticationConfig = (id) => {
+  const editAuthenticationConfig = (id, parentAction) => {
     const data = {
       id: id,
-      action: "assign_everywhere",
+      action: parentAction !== undefined && parentAction !== null ? parentAction : "assign_everywhere",
     };
     const url = globalUrl + "/api/v1/apps/authentication/" + id + "/config";
 
@@ -792,9 +830,9 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
       .then((response) =>
         response.json().then((responseJson) => {
           if (responseJson["success"] === false) {
-            alert.error("Failed overwriting appauth in workflows");
+            toast("Failed overwriting appauth");
           } else {
-            alert.success("Successfully updated auth everywhere!");
+            toast("Successfully updated auth!");
             setSelectedUserModalOpen(false);
             setTimeout(() => {
               getAppAuthentication();
@@ -803,7 +841,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
         })
       )
       .catch((error) => {
-        alert.error("Err: " + error.toString());
+        toast("Err: " + error.toString());
       });
   };
 
@@ -827,12 +865,12 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
         response.json().then((responseJson) => {
           if (responseJson["success"] === false) {
             if (responseJson.reason !== undefined) {
-              alert.error(responseJson.reason);
+              toast(responseJson.reason);
             } else {
-              alert.error("Failed creating suborg. Please try again");
+              toast("Failed creating suborg. Please try again");
             }
           } else {
-            alert.success(
+            toast(
               "Successfully created suborg. Reloading in 3 seconds!"
             );
             setSelectedUserModalOpen(false);
@@ -847,7 +885,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
         })
       )
       .catch((error) => {
-        alert.error("Err: " + error.toString());
+        toast("Err: " + error.toString());
       });
   };
 
@@ -870,18 +908,18 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
         response.json().then((responseJson) => {
           if (responseJson["success"] === false) {
             if (responseJson.reason !== undefined) {
-              alert.error(responseJson.reason);
+              toast(responseJson.reason);
             } else {
-              alert.error("Failed setting new password");
+              toast("Failed setting new password");
             }
           } else {
-            alert.success("Successfully updated password!");
+            toast("Successfully updated password!");
             setSelectedUserModalOpen(false);
           }
         })
       )
       .catch((error) => {
-        alert.error("Err: " + error.toString());
+        toast("Err: " + error.toString());
       });
   };
 
@@ -906,9 +944,9 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
       })
       .then((responseJson) => {
         if (!responseJson.success && responseJson.reason !== undefined) {
-          alert.error("Failed to deactivate user: " + responseJson.reason);
+          toast("Failed to deactivate user: " + responseJson.reason);
         } else {
-          alert.success("Changed activation for user " + data.id);
+          toast("Changed activation for user " + data.id);
         }
       })
 
@@ -931,7 +969,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
 		}
 
     if (orgId.length === 0) {
-      alert.error("Organization ID not defined. Please contact us on https://soc2.khulnasoft.com if this persists logout.");
+      toast("Organization ID not defined. Please contact us on https://gsoc2r.io if this persists logout.");
       return;
     }
 
@@ -952,7 +990,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
       })
       .then((responseJson) => {
         if (responseJson["success"] === false) {
-          alert.error("Failed getting your org. If this persists, please contact support.");
+          toast("Failed getting your org. If this persists, please contact support.");
         } else {
           if (
             responseJson.sync_features === undefined ||
@@ -971,6 +1009,26 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
 							leads.push("customer")
 						}
 
+						if (responseJson.lead_info.old_customer) {
+							leads.push("old customer")
+						}
+
+						if (responseJson.lead_info.old_lead) {
+							leads.push("old lead")
+						}
+
+						if (responseJson.lead_info.tech_partner) {
+							leads.push("tech partner")
+						}
+
+						if (responseJson.lead_info.creator) {
+							leads.push("creator")
+						}
+
+						if (responseJson.lead_info.opensource) {
+							leads.push("open source")
+						}
+
 						if (responseJson.lead_info.demo_done) {
 							leads.push("demo done")
 						}
@@ -985,6 +1043,14 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
 
 						if (responseJson.lead_info.student) {
 							leads.push("student")
+						}
+
+						if (responseJson.lead_info.internal) {
+							leads.push("internal")
+						}
+
+						if (responseJson.lead_info.sub_org) {
+							leads.push("sub_org")
 						}
 
 						setSelectedStatus(leads)
@@ -1016,7 +1082,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
       })
       .catch((error) => {
         console.log("Error getting org: ", error);
-        alert.error("Error getting current organization");
+        toast("Error getting current organization");
       });
   };
 
@@ -1045,7 +1111,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
         response.json().then((responseJson) => {
           if (responseJson["success"] === false) {
             setLoginInfo("Error: " + responseJson.reason);
-    				alert.error("Failed to send email (2). Please try again and contact support if this persists.")
+    				toast("Failed to send email (2). Please try again and contact support if this persists.")
           } else {
             setLoginInfo("");
             setModalOpen(false);
@@ -1053,13 +1119,13 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
               getUsers();
             }, 1000);
     				
-						alert.info("Invite sent! They will show up in the list when they have accepted the invite.")
+						toast("Invite sent! They will show up in the list when they have accepted the invite.")
           }
         })
       )
       .catch((error) => {
         console.log("Error in userdata: ", error);
-    		alert.error("Failed to send email. Please try again and contact support if this persists.")
+    		toast("Failed to send email. Please try again and contact support if this persists.")
       });
   };
 
@@ -1101,12 +1167,12 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
   // Horrible frontend fix for environments
   const setDefaultEnvironment = (environment) => {
     // FIXME - add more checks to this
-    alert.info("Setting default env to " + environment.name);
+    toast("Setting default env to " + environment.name);
     var newEnv = [];
     for (var key in environments) {
       if (environments[key].id == environment.id) {
         if (environments[key].archived) {
-          alert.error("Can't set archived to default");
+          toast("Can't set archived to default");
           return;
         }
 
@@ -1134,7 +1200,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
       .then((response) =>
         response.json().then((responseJson) => {
           if (responseJson["success"] === false) {
-            alert.error(responseJson.reason);
+            toast(responseJson.reason);
             setTimeout(() => {
               getEnvironments();
             }, 1500);
@@ -1165,7 +1231,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
       .then((response) =>
         response.json().then((responseJson) => {
           if (responseJson["success"] === false) {
-            alert.error(responseJson.reason);
+            toast(responseJson.reason);
             getEnvironments();
           } else {
             setLoginInfo("");
@@ -1180,7 +1246,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
   };
 
   const rerunCloudWorkflows = (environment) => {
-		alert.info("Starting execution reruns. This can run in the background.") 
+		toast("Starting execution reruns. This can run in the background.") 
     fetch(
       `${globalUrl}/api/v1/environments/${environment.id}/rerun`,
       {
@@ -1193,8 +1259,8 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
           console.log("Status not 200 for apps :O!");
           return;
         } else {
-          alert.error(response.reason);
-          //alert.info("Aborted all dangling workflows");
+          toast(response.reason);
+          //toast("Aborted all dangling workflows");
         }
 
         return response.json();
@@ -1205,7 +1271,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
         //setFiles(responseJson)
       })
       .catch((error) => {
-        //alert.error(error.toString())
+        //toast(error.toString())
       });
   };
 
@@ -1222,10 +1288,10 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
       .then((response) => {
         if (response.status !== 200) {
           console.log("Status not 200 for apps :O!");
-          alert.error("Failed aborting dangling workflows");
+          toast("Failed aborting dangling workflows");
           return;
         } else {
-          alert.info("Aborted all dangling workflows");
+          toast("Aborted all dangling workflows");
         }
 
         return response.json();
@@ -1236,7 +1302,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
         //setFiles(responseJson)
       })
       .catch((error) => {
-        //alert.error(error.toString())
+        //toast(error.toString())
       });
   };
 
@@ -1244,17 +1310,17 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
     // FIXME - add some check here ROFL
     //const name = environment.name
 
-    //alert.info("Modifying environment " + name)
+    //toast("Modifying environment " + name)
     //var newEnv = []
     //for (var key in environments) {
     //	if (environments[key].Name == name) {
     //		if (environments[key].default) {
-    //			alert.error("Can't modify the default environment")
+    //			toast("Can't modify the default environment")
     //			return
     //		}
 
     //		if (environments[key].type === "cloud" && !environments[key].archived) {
-    //			alert.error("Can't modify cloud environments")
+    //			toast("Can't modify cloud environments")
     //			return
     //		}
 
@@ -1265,17 +1331,17 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
     //}
     const id = environment.id;
 
-    //alert.info("Modifying environment " + environment.Name)
+    //toast("Modifying environment " + environment.Name)
     var newEnv = [];
     for (var key in environments) {
       if (environments[key].id == id) {
         if (environments[key].default) {
-          alert.error("Can't modify the default environment");
+          toast("Can't modify the default environment");
           return;
         }
 
         if (environments[key].type === "cloud" && !environments[key].archived) {
-          alert.error("Can't modify cloud environments");
+          toast("Can't modify cloud environments");
           return;
         }
 
@@ -1298,7 +1364,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
       .then((response) =>
         response.json().then((responseJson) => {
           if (responseJson["success"] === false) {
-            alert.error(responseJson.reason);
+            toast(responseJson.reason);
             getEnvironments();
           } else {
             setLoginInfo("");
@@ -1371,7 +1437,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
         setSchedules(responseJson);
       })
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
       });
   };
 
@@ -1393,16 +1459,16 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
         return response.json();
       })
       .then((responseJson) => {
-        if (responseJson.success) {
+        if (responseJson.success === true) {
           //console.log(responseJson.data)
           //console.log(responseJson)
           setAuthentication(responseJson.data);
         } else {
-          alert.error("Failed getting authentications");
+          toast("Failed getting authentications");
         }
       })
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
       });
   };
 
@@ -1427,7 +1493,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
         setEnvironments(responseJson);
       })
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
       });
   };
 
@@ -1455,7 +1521,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
         setOrganizations(responseJson);
       })
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
       });
   };
 
@@ -1481,13 +1547,9 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
         setUsers(responseJson);
       })
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
       });
   };
-
-  useEffect(() => {
-		getUsers()
-  }, []);
 
   const getSettings = () => {
     fetch(globalUrl + "/api/v1/getsettings", {
@@ -1572,6 +1634,8 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
   if (firstRequest) {
     setFirstRequest(false);
     document.title = "Gsoc2 - admin";
+
+    getEnvironments();
     if (!isCloud) {
       getUsers();
     } else {
@@ -1658,10 +1722,10 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
       })
       .then((responseJson) => {
         if (!responseJson.success && responseJson.reason !== undefined) {
-          alert.error("Failed setting user: " + responseJson.reason);
+          toast("Failed setting user: " + responseJson.reason);
         } else {
-          //alert.success("Set the user field " + field + " to " + value);
-          alert.success("Successfully updated user field " + field)
+          //toast("Set the user field " + field + " to " + value);
+          toast("Successfully updated user field " + field)
 
           if (field !== "suborgs") {
             setSelectedUserModalOpen(false);
@@ -1677,15 +1741,24 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
     const userId = user.id;
     const data = { user_id: userId };
 
-    fetch(globalUrl + "/api/v1/generateapikey", {
+	toast("Generating new API key") 
+
+    var fetchdata = {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
       },
-      body: JSON.stringify(data),
       credentials: "include",
-    })
+    }
+
+    if (userId === userdata.id) {
+		fetchdata.method = "GET"
+	} else {
+      	fetchdata.body = JSON.stringify(data)
+	}
+
+    fetch(globalUrl + "/api/v1/generateapikey", fetchdata)
       .then((response) => {
         if (response.status !== 200) {
           console.log("Status not 200 for WORKFLOW EXECUTION :O!");
@@ -1698,9 +1771,9 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
       .then((responseJson) => {
         console.log("RESP: ", responseJson);
         if (!responseJson.success && responseJson.reason !== undefined) {
-          alert.error("Failed getting new: " + responseJson.reason);
+          toast("Failed getting new: " + responseJson.reason);
         } else {
-          alert.success("Got new API key");
+          toast("Got new API key");
         }
       })
       .catch((error) => {
@@ -1794,9 +1867,9 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
             }
 
             if (error) {
-              alert.error("All fields must have a new value");
+              toast("All fields must have a new value");
             } else {
-              alert.success("Saving new version of this authentication");
+              toast("Saving new version of this authentication");
               selectedAuthentication.fields = authenticationFields;
               saveAuthentication(selectedAuthentication);
               setSelectedAuthentication({});
@@ -1813,7 +1886,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
 
   const handleOrgEditChange = (event) => {
     if (userdata.id === selectedUser.id) {
-      alert.info("Can't remove orgs from yourself");
+      toast("Can't remove orgs from yourself");
       return;
     }
 
@@ -1874,8 +1947,11 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
       open={selectedUserModalOpen}
       onClose={() => {
         setSelectedUserModalOpen(false);
-        setImage2FA("");
-        setSecret2FA("");
+
+		setImage2FA("");
+		setValue2FA("");
+		setSecret2FA("");
+		setShow2faSetup(false);
       }}
       PaperProps={{
         style: {
@@ -2141,7 +2217,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
         <Card
           style={{
             margin: 4,
-            backgroundColor: theme.palette.inputColor,
+            backgroundColor: theme.palette.surfaceColor,
             color: "white",
             minHeight: expanded ? 250 : "inherit",
             maxHeight: expanded ? 250 : "inherit",
@@ -2186,7 +2262,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
       primary: "Workflows",
       secondary: "",
       active: true,
-      icon: <PolymerIcon style={{ color: itemColor }} />,
+      icon: <PolylineIcon style={{ color: itemColor }} />,
     },
     {
       primary: "Apps",
@@ -2356,23 +2432,22 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
 						*/}
 
 						{userdata.support === true ? 
-							<span style={{display: "flex", top: -10, right: 50, position: "absolute"}}>
-								<a href={mailsendingButton(selectedOrganization)} target="_blank" rel="noopener noreferrer" style={{textDecoration: "none"}} disabled={selectedStatus.length !== 0}>
-									<Button
-										variant="outlined"
-										color="primary"
-										disabled={selectedStatus.length !== 0}
-										style={{ minWidth: 80, maxWidth: 80, height: "100%", }} 
-										onClick={() => {
-												console.log("Should send mail to admins of org with context")
-												handleStatusChange({target: {value: ["contacted"]}})
-
-												// open a mailto with subject "hello" and sender "gsoc2@soc2.khulnasoft.com"
-										}}
-									>
-										Sales mail
-									</Button>
-								</a>
+							<span style={{display: "flex", top: -10, right: -50, position: "absolute"}}>
+								{/*<a href={mailsendingButton(selectedOrganization)} target="_blank" rel="noopener noreferrer" style={{textDecoration: "none"}} disabled={selectedStatus.length !== 0}>*/}
+								<Button
+									variant="outlined"
+									color="primary"
+									disabled={selectedStatus.length !== 0}
+									style={{ minWidth: 80, maxWidth: 80, height: "100%", }} 
+									onClick={() => {
+											console.log("Should send mail to admins of org with context")
+											handleStatusChange({target: {value: ["contacted"]}})
+											// Open a new tab
+											window.open(mailsendingButton(selectedOrganization), "_blank")
+									}}
+								>
+									Sales mail
+								</Button>
 								<FormControl sx={{ m: 1, width: 300, }} style={{}}>
 									<InputLabel id="">Status</InputLabel>
 									<Select
@@ -2386,7 +2461,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
 										renderValue={(selected) => selected.join(', ')}
 										MenuProps={MenuProps}
 									>
-										{["contacted", "lead", "pov", "demo done", "customer", "student", ].map((name) => (
+										{["contacted", "lead", "demo done", "pov", "customer", "open source", "student", "internal", "creator", "tech partner", "old customer", "old lead", ].map((name) => (
 											<MenuItem key={name} value={name}>
 												<Checkbox checked={selectedStatus.indexOf(name) > -1} />
 												<ListItemText primary={name} />
@@ -2411,7 +2486,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
                   if (copyText !== null && copyText !== undefined) {
                     const clipboard = navigator.clipboard;
                     if (clipboard === undefined) {
-                      alert.error("Can only copy over HTTPS (port 3443)");
+                      toast("Can only copy over HTTPS (port 3443)");
                       return;
                     }
 
@@ -2425,7 +2500,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
                     /* Copy the text inside the text field */
                     document.execCommand("copy");
 
-                    alert.info(org_id + " copied to clipboard");
+                    toast(org_id + " copied to clipboard");
                   }
                 }}
               >
@@ -2454,8 +2529,8 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
                 setSelectedOrganization={setSelectedOrganization}
                 globalUrl={globalUrl}
                 selectedOrganization={selectedOrganization}
-								adminTab={adminTab}
-  							handleEditOrg={handleEditOrg}
+				adminTab={adminTab}
+				handleEditOrg={handleEditOrg}
               />
             ) : (
               <div
@@ -2501,31 +2576,16 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
 								</span>
 							/>
 							<Tab
+								label=<span>
+									Licensing 
+								</span>
+							/>
+							<Tab
 								disabled={!isCloud}
 								label=<span>
-									Billing
+									Branding (Beta)
 								</span>
 							/>
-							<Tab
-								disabled={!isCloud || true}
-								label=<span>
-									Branding	
-								</span>
-							/>
-							<Tab
-								disabled={true}
-								label=<span>
-									Usage	
-								</span>
-							/>
-							{/*
-							<Tab
-								disabled={true}
-								label=<span>
-									Notifications	
-								</span>
-							/>
-							*/}
 						</Tabs>
 
             <Divider
@@ -2755,7 +2815,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
             		            item.usage === null ? 0 : item.usage,
             		          data_collection: "None",
             		          active: item.active,
-            		          icon: <PolymerIcon style={{ color: itemColor }} />,
+            		          icon: <PolylineIcon style={{ color: itemColor }} />,
             		        };
 
             		        return (
@@ -2774,6 +2834,10 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
 								adminTab={adminTab}
 								globalUrl={globalUrl}
 								checkLogin={checkLogin}
+								setAdminTab={setAdminTab}
+								setCurTab={setCurTab}
+								notifications={notifications}
+								setNotifications={setNotifications}
 							/>
 						: adminTab === 3 ? 
 							<Billing 
@@ -2795,7 +2859,6 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
 								adminTab={adminTab}
 								globalUrl={globalUrl}
 								handleGetOrg={handleGetOrg}
-								selectedOrganization={selectedOrganization}
 								selectedOrganization={selectedOrganization}
 								setSelectedOrganization={setSelectedOrganization}
 							/>
@@ -2988,12 +3051,12 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
     curTab === 1 ? (
       <div>
         <div style={{ marginTop: 20, marginBottom: 20 }}>
-          <h2 style={{ display: "inline" }}>User management</h2>
+          <h2 style={{ display: "inline" }}>User Management</h2>
           <span style={{ marginLeft: 25 }}>
             Add, edit, block or change passwords.{" "}
             <a
               target="_blank"
-							rel="noopener noreferrer"
+			  rel="noopener noreferrer"
               href="/docs/organizations#user_management"
               style={{ textDecoration: "none", color: "#f85a3e" }}
             >
@@ -3068,7 +3131,11 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
             ) : null}
             <ListItemText
               primary="Actions"
-              style={{ minWidth: 180, maxWidth: 180 }}
+              style={{ minWidth: 100, maxWidth: 100, }}
+            />
+            <ListItemText
+              primary="Last Login"
+              style={{ minWidth: 150, maxWidth: 150, }}
             />
           </ListItem>
           {users === undefined || users === null
@@ -3078,6 +3145,23 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
                 if (index % 2 === 0) {
                   bgColor = "#1f2023";
                 }
+
+				const timeNow = new Date().getTime();
+				
+				// Get the highest timestamp in data.login_info
+				var lastLogin = "N/A" 
+				if (data.login_info !== undefined && data.login_info !== null) {
+					var loginInfo = 0
+					for (var i = 0; i < data.login_info.length; i++) {
+						if (data.login_info[i].timestamp > loginInfo) {
+							loginInfo = data.login_info[i].timestamp
+						}
+					}
+
+					if (loginInfo > 0) {
+						lastLogin = new Date(loginInfo * 1000).toISOString().slice(0, 10) + " (" + data.login_info.length + ")"
+					}
+				}
 
                 return (
                   <ListItem key={index} style={{ backgroundColor: bgColor }}>
@@ -3114,7 +3198,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
                                 ) {
                                   const clipboard = navigator.clipboard;
                                   if (clipboard === undefined) {
-                                    alert.error(
+                                    toast(
                                       "Can only copy over HTTPS (port 3443)"
                                     );
                                     return;
@@ -3130,7 +3214,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
                                   /* Copy the text inside the text field */
                                   document.execCommand("copy");
 
-                                  alert.info("Apikey copied to clipboard");
+                                  toast("Apikey copied to clipboard");
                                 }
                               }}
                             >
@@ -3230,7 +3314,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
                         }
                       />
                     ) : null}
-                    <ListItemText style={{ display: "flex" }}>
+                    <ListItemText style={{ display: "flex", minWidth: 100, maxWidth: 100,  }}>
                       <IconButton
                         onClick={() => {
                           setSelectedUserModalOpen(true);
@@ -3245,10 +3329,8 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
                             selectedOrganization.child_orgs !== null &&
                             selectedOrganization.child_orgs.length > 0
                           ) {
-                            console.log("In here?");
                             var active = [];
                             for (var key in userdata.orgs) {
-                              console.log("ORG: ", userdata.orgs[key]);
                               const found =
                                 selectedOrganization.child_orgs.find(
                                   (item) => item.id === userdata.orgs[key].id
@@ -3290,6 +3372,11 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
 						New apikey 
 					</Button>*/}
                     </ListItemText>
+				    <ListItemText 
+				      style={{ minWidth: 150, maxWidth: 150,  }}
+				      primary={lastLogin}
+				    ><span/>
+				    </ListItemText>
                   </ListItem>
                 );
               })}
@@ -3298,7 +3385,6 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
     ) : null;
 
   const run2FASetup = (data) => {
-    console.log("2fa: ", data, show2faSetup);
     if (!show2faSetup) {
       get2faCode(data.id);
     } else {
@@ -3365,6 +3451,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
               style={{ minWidth: 300, maxWidth: 300, overflow: "hidden" }}
             />
             <ListItemText primary="Actions" />
+            <ListItemText primary="Delegation" />
           </ListItem>
           {schedules === undefined || schedules === null
             ? null
@@ -3379,11 +3466,10 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
                     <ListItemText
                       style={{ maxWidth: 200, minWidth: 200 }}
                       primary={
-                        schedule.environment === "cloud" ? (
+                        schedule.environment === "cloud" || schedule.environment === "" || schedule.frequency.length > 0 ? 
                           schedule.frequency
-                        ) : (
+                         : 
                           <span>{schedule.seconds} seconds</span>
-                        )
                       }
                     />
                     <ListItemText
@@ -3397,14 +3483,14 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
                           style={{ textDecoration: "none", color: "#f85a3e" }}
                           href={`/workflows/${schedule.workflow_id}`}
                           target="_blank"
-													rel="noopener noreferrer"
+						  rel="noopener noreferrer"
                         >
                           {schedule.workflow_id}
                         </a>
                       }
                     />
                     <ListItemText
-                      primary={schedule.argument}
+                      primary={schedule.argument.replaceAll('\\\"', '\"')}
                       style={{
                         minWidth: 300,
                         maxWidth: 300,
@@ -3584,10 +3670,13 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
               style={{ minWidth: 125, maxWidth: 125, overflow: "hidden" }}
             />
             <ListItemText
-              primary="Created"
+              primary="Edited"
               style={{ minWidth: 230, maxWidth: 230, overflow: "hidden" }}
             />
-            <ListItemText primary="Actions" />
+            <ListItemText primary="Actions" 
+              style={{ minWidth: 150, maxWidth: 150, }}
+			/>
+            <ListItemText primary="Distribution" />
           </ListItem>
           {authentication === undefined || authentication === null
             ? null
@@ -3618,6 +3707,8 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
                     },
                   ];
                 }
+
+				const isDistributed = data.suborg_distributed === true ? true : false;
 
                 return (
                   <ListItem key={index} style={{ backgroundColor: bgColor }}>
@@ -3694,31 +3785,32 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
                         minWidth: 230,
                         overflow: "hidden",
                       }}
-                      primary={new Date(data.created * 1000).toISOString()}
+                      primary={new Date(data.edited * 1000).toISOString()}
                     />
                     <ListItemText>
                       <IconButton
                         onClick={() => {
                           updateAppAuthentication(data);
                         }}
+						disabled={data.org_id !== selectedOrganization.id ? true : false}
                       >
-                        <EditIcon color="primary" />
+                        <EditIcon color="secondary" />
                       </IconButton>
                       {data.defined ? (
                         <Tooltip
                           color="primary"
-                          title="Set in EVERY workflow"
+                          title="Set in EVERY workflow in the organization"
                           placement="top"
                         >
                           <IconButton
                             style={{ marginRight: 10 }}
-                            disabled={data.defined === false}
+							disabled={data.defined === false || data.org_id !== selectedOrganization.id ? true : false}
                             onClick={() => {
                               editAuthenticationConfig(data.id);
                             }}
                           >
                             <SelectAllIcon
-                              color={data.defined ? "primary" : "secondary"}
+                              color={"secondary"}
                             />
                           </IconButton>
                         </Tooltip>
@@ -3729,22 +3821,53 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
                           placement="top"
                         >
                           <IconButton
-                            style={{ marginRight: 10 }}
+                            style={{}}
                             onClick={() => {}}
+							disabled={data.org_id !== selectedOrganization.id ? true : false}
                           >
                             <SelectAllIcon
-                              color={data.defined ? "primary" : "secondary"}
+                              color="secondary"
                             />
                           </IconButton>
                         </Tooltip>
                       )}
                       <IconButton
+						style={{marginLeft: 0, }}
+						disabled={data.org_id !== selectedOrganization.id ? true : false}
                         onClick={() => {
                           deleteAuthentication(data);
                         }}
                       >
-                        <DeleteIcon color="primary" />
+                        <DeleteIcon color="secondary" />
                       </IconButton>
+                    </ListItemText>
+                    <ListItemText>
+					  {selectedOrganization.id !== undefined && data.org_id !== selectedOrganization.id ? 
+						  <Tooltip
+							title="Parent organization controlled auth. You can use, but not modify this auth. Contact an admin of your parent organization if you need changes to this."
+							placement="top"
+						  >
+							<Chip
+								label={"Parent"}
+								variant="contained"
+								color="secondary"
+							  />
+						  </Tooltip>
+						  :
+						  <Tooltip
+							title="Distributed to sub-organizations. This means the sub organizations can use this authentication, but not modify it."
+							placement="top"
+						  >
+							  <Checkbox 
+								disabled={selectedOrganization.creator_org !== undefined && selectedOrganization.creator_org !== null && selectedOrganization.creator_org !== "" ? true : false}
+								checked={isDistributed}
+						  		color="secondary"
+								onClick={() => {
+									changeDistribution(data, !isDistributed)
+								}}
+							  />
+						  </Tooltip>
+					  }
                     </ListItemText>
                   </ListItem>
                 );
@@ -3785,14 +3908,14 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
 					}
         } else {
         	if (responseJson.success === false && responseJson.reason !== undefined) {
-          	alert.error("Failed change recommendation: ", responseJson.reason)
+          	toast("Failed change recommendation: ", responseJson.reason)
         	} else {
-          	alert.error("Failed change recommendation");
+          	toast("Failed change recommendation");
 					}
         }
       })
       .catch((error) => {
-        alert.info("Failed dismissing alert. Please contact support@soc2.khulnasoft.com if this persists.");
+        toast("Failed dismissing alert. Please contact support@gsoc2r.io if this persists.");
       });
 	}
 
@@ -3863,20 +3986,20 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
               style={{ minWidth: 125, maxWidth: 125 }}
             />
             <ListItemText
-              primary="Default"
-              style={{ minWidth: 125, maxWidth: 125 }}
+              primary={"In Queue"}
+              style={{ minWidth: 100, maxWidth: 100 }}
             />
             <ListItemText
-              primary="Disabled"
-              style={{ minWidth: 100, maxWidth: 100 }}
+              primary="Default"
+              style={{ minWidth: 150, maxWidth: 150 }}
+            />
+            <ListItemText
+              primary="Actions"
+              style={{ minWidth: 200, maxWidth: 200}}
             />
             <ListItemText
               primary="Last Edited"
               style={{ minWidth: 170, maxWidth: 170 }}
-            />
-            <ListItemText
-              primary="Actions"
-              style={{ minWidth: 150, maxWidth: 150 }}
             />
           </ListItem>
           {environments === undefined || environments === null
@@ -3895,18 +4018,20 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
                   bgColor = "#1f2023";
                 }
 
-								// Check if there's a notification for it in userdata.priorities
-								var showCPUAlert = false	
-								var foundIndex = -1
-								if (userdata !== undefined && userdata !== null && userdata.priorities !== undefined && userdata.priorities !== null && userdata.priorities.length > 0) {
-									foundIndex = userdata.priorities.findIndex(prio => prio.name.includes("CPU") && prio.active === true)
+				// Check if there's a notification for it in userdata.priorities
+				var showCPUAlert = false	
+				var foundIndex = -1
+				if (userdata !== undefined && userdata !== null && userdata.priorities !== undefined && userdata.priorities !== null && userdata.priorities.length > 0) {
+					foundIndex = userdata.priorities.findIndex(prio => prio.name.includes("CPU") && prio.active === true)
 
-									if (foundIndex >= 0 && userdata.priorities[foundIndex].name.endsWith(environment.Name)) {
-											showCPUAlert = true
-									}
-								}
+					if (foundIndex >= 0 && userdata.priorities[foundIndex].name.endsWith(environment.Name)) {
+							showCPUAlert = true
+					}
+				}
 
-								console.log("Show CPU alert: ", showCPUAlert)
+				//console.log("Show CPU alert: ", showCPUAlert)
+
+				const queueSize = environment.queue !== undefined && environment.queue !== null ? environment.queue < 0 ? 0 : environment.queue > 99 ? ">99" : environment.queue : 0
 
                 return (
 									<span key={index}>
@@ -3942,49 +4067,56 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
                   	  <ListItemText
                   	    style={{ minWidth: 100, maxWidth: 100 }}
                   	    primary={
-													<Tooltip
-														title={"Copy Orborus command"}
-														style={{}}
-														aria-label={"Copy orborus command"}
-													>
-														<IconButton
-															style={{}}
-															disabled={environment.Type === "cloud"}
-															onClick={() => {
-																if (environment.Type === "cloud") {
-																	alert.info("No Orborus necessary for environment cloud. Create and use a different environment to run executions on-premises.")
-																	return
-																}
+							<Tooltip
+								title={"Copy Orborus command"}
+								style={{}}
+								aria-label={"Copy orborus command"}
+							>
+								<IconButton
+									style={{}}
+									disabled={environment.Type === "cloud"}
+									onClick={() => {
+										if (environment.Type === "cloud") {
+											toast("No Orborus necessary for environment cloud. Create and use a different environment to run executions on-premises.")
+											return
+										}
 
-																const elementName = "copy_element_gsoc2";
-																const auth = environment.auth === "" ? 'cb5st3d3Z!3X3zaJ*Pc' : environment.auth
-																const commandData = `docker run --volume "/var/run/docker.sock:/var/run/docker.sock" -e ENVIRONMENT_NAME="${environment.Name}" -e 'AUTH=${auth}' -e ORG="${props.userdata.active_org.id}" -e DOCKER_API_VERSION=1.40 -e BASE_URL="${globalUrl}" --name="gsoc2-orborus" -d ghcr.io/gsoc2/gsoc2-orborus:latest`
-																var copyText = document.getElementById(elementName);
-																if (copyText !== null && copyText !== undefined) {
-																	const clipboard = navigator.clipboard;
-																	if (clipboard === undefined) {
-																		alert.error("Can only copy over HTTPS (port 3443)");
-																		return;
-																	}
+										if (props.userdata.active_org === undefined || props.userdata.active_org === null) {
+											toast("No active organization yet. Are you logged in?")
+											return
+										}
 
-																	navigator.clipboard.writeText(commandData);
-																	copyText.select();
-																	copyText.setSelectionRange(
-																		0,
-																		99999
-																	); /* For mobile devices */
+										const elementName = "copy_element_gsoc2";
+										const auth = environment.auth === "" ? 'cb5st3d3Z!3X3zaJ*Pc' : environment.auth
+										const newUrl = globalUrl === "https://gsoc2r.io" ? "https://gsoc2-backend-stbuwivzoq-nw.a.run.app" : globalUrl
 
-																	/* Copy the text inside the text field */
-																	document.execCommand("copy");
+										const commandData = `docker run --volume "/var/run/docker.sock:/var/run/docker.sock" -e ENVIRONMENT_NAME="${environment.Name}" -e 'AUTH=${auth}' -e ORG="${props.userdata.active_org.id}" -e DOCKER_API_VERSION=1.40 -e BASE_URL="${newUrl}" --name="gsoc2-orborus" -d ghcr.io/gsoc2/gsoc2-orborus:latest`
+										var copyText = document.getElementById(elementName);
+										if (copyText !== null && copyText !== undefined) {
+											const clipboard = navigator.clipboard;
+											if (clipboard === undefined) {
+												toast("Can only copy over HTTPS (port 3443)");
+												return;
+											}
 
-																	alert.info("Orborus command copied to clipboard");
-																}
-															}}
-														>
-															<FileCopyIcon disabled={environment.Type === "cloud"} style={{ color: environment.Type === "cloud" ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.8)" }} />
-														</IconButton>
-													</Tooltip>
-												}
+											navigator.clipboard.writeText(commandData);
+											copyText.select();
+											copyText.setSelectionRange(
+												0,
+												99999
+											); /* For mobile devices */
+
+											/* Copy the text inside the text field */
+											document.execCommand("copy");
+
+											toast("Orborus command copied to clipboard");
+										}
+									}}
+								>
+									<FileCopyIcon disabled={environment.Type === "cloud"} style={{ color: environment.Type === "cloud" ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.8)" }} />
+								</IconButton>
+							</Tooltip>
+						}
                   	  />
 
                   	  <ListItemText
@@ -3993,8 +4125,18 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
                   	  />
                   	  <ListItemText
                   	    style={{
-                  	      minWidth: 125,
-                  	      maxWidth: 125,
+                  	      minWidth: 100,
+                  	      maxWidth: 100,
+                  	      overflow: "hidden",
+                  	      marginLeft: 10,
+                  	    }}
+
+                  	    primary={queueSize}
+                  	  />
+                  	  <ListItemText
+                  	    style={{
+                  	      minWidth: 140,
+                  	      maxWidth: 140,
                   	      overflow: "hidden",
                   	    }}
                   	    primary={environment.default ? "true" : null}
@@ -4006,19 +4148,49 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
                   	        onClick={() => setDefaultEnvironment(environment)}
                   	        color="primary"
                   	      >
-                  	        Make default
+                  	        Set Default
                   	      </Button>
                   	    )}
                   	  </ListItemText>
                   	  <ListItemText
                   	    style={{
-                  	      minWidth: 100,
-                  	      maxWidth: 100,
+                  	      minWidth: 200,
+                  	      maxWidth: 200,
                   	      overflow: "hidden",
                   	      marginLeft: 10,
                   	    }}
-                  	    primary={environment.archived.toString()}
-                  	  />
+                  	  >
+                  	    <div style={{ display: "flex" }}>
+							<ButtonGroup style={{borderRadius: "5px 5px 5px 5px",}}>
+								<Button
+									variant={environment.archived ? "contained" : "outlined"}
+									style={{ }}
+									onClick={() => deleteEnvironment(environment)}
+									color="primary"
+								>
+									{environment.archived ? "Activate" : "Disable"}
+								</Button>
+								<Button
+									variant={"outlined"}
+									style={{ }}
+									disabled={isCloud && environment.Name.toLowerCase() !== "cloud"}
+									onClick={() => {
+										console.log("Should clear executions for: ", environment);
+
+										if (isCloud && environment.Name.toLowerCase() === "cloud") {
+											rerunCloudWorkflows(environment);
+										} else { 
+											abortEnvironmentWorkflows(environment);
+										}
+									}}
+									color="primary"
+								>
+									{isCloud && environment.Name.toLowerCase() === "cloud" ? "Rerun" : "Clear"}
+								</Button>
+
+							</ButtonGroup>
+                  	    </div>
+                  	  </ListItemText>
                   	  <ListItemText
                   	    style={{
                   	      minWidth: 150,
@@ -4033,68 +4205,30 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
                   	        : 0
                   	    }
                   	  />
-                  	  <ListItemText
-                  	    style={{
-                  	      minWidth: 300,
-                  	      maxWidth: 300,
-                  	      overflow: "hidden",
-                  	      marginLeft: 10,
-                  	    }}
-                  	  >
-                  	    <div style={{ display: "flex" }}>
-													<ButtonGroup style={{borderRadius: "5px 5px 5px 5px",}}>
-														<Button
-															variant={environment.archived ? "contained" : "outlined"}
-															style={{ }}
-															onClick={() => deleteEnvironment(environment)}
-															color="primary"
-														>
-															{environment.archived ? "Activate" : "Disable"}
-														</Button>
-														<Button
-															variant={"outlined"}
-															style={{ }}
-															disabled={isCloud && environment.Name.toLowerCase() !== "cloud"}
-															onClick={() => {
-																console.log("Should clear executions for: ", environment);
-
-																if (isCloud && environment.Name.toLowerCase() === "cloud") {
-																	rerunCloudWorkflows(environment);
-																} else { 
-																	abortEnvironmentWorkflows(environment);
-																}
-															}}
-															color="primary"
-														>
-															{isCloud && environment.Name.toLowerCase() === "cloud" ? "Rerun" : "Clear"}
-														</Button>
-													</ButtonGroup>
-                  	    </div>
-                  	  </ListItemText>
                   	</ListItem>
-										{showCPUAlert === false ? null : 
+					{showCPUAlert === false ? null : 
                   		<ListItem key={index+"_cpu"} style={{ backgroundColor: bgColor }}>
-												<div style={{border: "1px solid #f85a3e", borderRadius: theme.palette.borderRadius, marginTop: 10, marginBottom: 10, padding: 15, textAlign: "center", height: 70, textAlign: "left", backgroundColor: theme.palette.surfaceColor, display: "flex", }}>
-													<div style={{flex: 2, overflow: "hidden",}}>
-														<Typography variant="body1" >
-															90% CPU the server(s) hosting the Gsoc2 App Runner (Orborus) was found.  
-														</Typography>
-														<Typography variant="body2" color="textSecondary">
-															Need help with High Availability and Scale? <a href="/docs/configuration#scale" target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: "#f85a3e" }}>Read documentation</a> and <a href="https://soc2.khulnasoft.com/contact" target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: "#f85a3e" }}>Get in touch</a>.  
-														</Typography>
-													</div>
-													<div style={{flex: 1, display: "flex", marginLeft: 30, }}>
-														<Button style={{borderRadius: 25, width: 200, height: 50, marginTop: 8, }} variant="outlined" color="secondary" onClick={() => {
-															// dismiss -> get envs
-														 	changeRecommendation(userdata.priorities[foundIndex], "dismiss")
-														}}>
-															Dismiss	
-														</Button>
-													</div> 
-												</div>
-											</ListItem>
-										}
-									</span>
+							<div style={{border: "1px solid #f85a3e", borderRadius: theme.palette.borderRadius, marginTop: 10, marginBottom: 10, padding: 15, textAlign: "center", height: 70, textAlign: "left", backgroundColor: theme.palette.surfaceColor, display: "flex", }}>
+								<div style={{flex: 2, overflow: "hidden",}}>
+									<Typography variant="body1" >
+										90% CPU the server(s) hosting the Gsoc2 App Runner (Orborus) was found.  
+									</Typography>
+									<Typography variant="body2" color="textSecondary">
+										Need help with High Availability and Scale? <a href="/docs/configuration#scale" target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: "#f85a3e" }}>Read documentation</a> and <a href="https://gsoc2r.io/contact" target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: "#f85a3e" }}>Get in touch</a>.  
+									</Typography>
+								</div>
+								<div style={{flex: 1, display: "flex", marginLeft: 30, }}>
+									<Button style={{borderRadius: 25, width: 200, height: 50, marginTop: 8, }} variant="outlined" color="secondary" onClick={() => {
+										// dismiss -> get envs
+										changeRecommendation(userdata.priorities[foundIndex], "dismiss")
+									}}>
+										Dismiss	
+									</Button>
+								</div> 
+							</div>
+						</ListItem>
+					}
+				</span>
                 );
               })}
         </List>
@@ -4331,7 +4465,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
           <Tab
             label=<span>
               <LockIcon style={iconStyle} />
-              App Authentication
+              App Auth 
             </span>
           />
           <Tab
@@ -4356,7 +4490,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
           <Tab
             disabled={userdata.admin !== "true"}
             label=<span>
-              <EcoIcon style={iconStyle} />
+              <FmdGoodIcon style={iconStyle} />
               Environments
             </span>
           />
