@@ -44,7 +44,7 @@ import {
 
 import { validateJson } from "../views/Workflows.jsx";
 import ReactJson from "react-json-view";
-import PaperComponent from "../components/PaperComponent.jsx";
+import PaperComponent from "./PaperComponent.jsx";
 
 import CodeMirror from '@uiw/react-codemirror';
 //import 'codemirror/keymap/sublime';
