@@ -1,11 +1,12 @@
 import os
 import ast
-import copy
 import sys
 import re
+import copy
 import time 
 import base64
 import json
+import random
 import liquid
 import logging
 import urllib3
@@ -22,8 +23,7 @@ import dateutil
 import threading
 import concurrent.futures
 
-from io import StringIO as StringBuffer
-from io import BytesIO
+from io import StringIO as StringBuffer, BytesIO 
 from liquid import Liquid, defaults
 
 runtime = os.getenv("GSOC2_SWARM_CONFIG", "")
@@ -105,9 +105,12 @@ def base64_encode(a):
 def base64_decode(a):
     a = str(a)
     try:
-        return base64.b64decode(a).decode()
+        return base64.b64decode(a).decode("unicode_escape")
     except:
-        return base64.b64decode(a)
+        try:
+            return base64.b64decode(a).decode()
+        except:
+            return base64.b64decode(a)
 
 @gsoc2_filters.register
 def json_parse(a):
@@ -141,6 +144,7 @@ def escape_json(a):
 def escape(a):
     a = str(a)
     return json_escape(a)
+
 
 @gsoc2_filters.register
 def neat_json(a):
@@ -292,15 +296,17 @@ class AppBase:
         # apikey is for the user / org
         # authorization is for the specific workflow
 
-        self.url = os.getenv("CALLBACK_URL",  "https://soc2.khulnasoft.com")
-        self.base_url = os.getenv("BASE_URL", "https://soc2.khulnasoft.com")
+        self.url = os.getenv("CALLBACK_URL",  "https://gsoc2r.io")
+        self.base_url = os.getenv("BASE_URL", "https://gsoc2r.io")
         self.action = os.getenv("ACTION", "")
         self.original_action = os.getenv("ACTION", "")
         self.authorization = os.getenv("AUTHORIZATION", "")
         self.current_execution_id = os.getenv("EXECUTIONID", "")
         self.full_execution = os.getenv("FULL_EXECUTION", "") 
-        self.start_time = int(time.time())
         self.result_wrapper_count = 0
+
+        # Make start time with milliseconds
+        self.start_time = int(time.time_ns())
 
         self.action_result = {
             "action": self.action,
@@ -309,8 +315,23 @@ class AppBase:
             "result": f"",
             "started_at": self.start_time,
             "status": "",
-            "completed_at": int(time.time()),
+            "completed_at": int(time.time_ns()),
         }
+
+        self.proxy_config = {
+            "http": os.getenv("HTTP_PROXY", ""),
+            "https": os.getenv("HTTPS_PROXY", ""),
+            "no_proxy": os.getenv("NO_PROXY", ""),
+        }
+
+        if len(os.getenv("GSOC2_INTERNAL_HTTP_PROXY", "")) > 0:
+            self.proxy_config["http"] = os.getenv("GSOC2_INTERNAL_HTTP_PROXY", "")
+
+        if len(os.getenv("GSOC2_INTERNAL_HTTPS_PROXY", "")) > 0:
+            self.proxy_config["https"] = os.getenv("GSOC2_INTERNAL_HTTP_PROXY", "")
+
+        if len(os.getenv("GSOC2_INTERNAL_NO_PROXY", "")) > 0:
+            self.proxy_config["no_proxy"] = os.getenv("GSOC2_INTERNAL_NO_PROXY", "")
 
         if isinstance(self.action, str):
             try:
@@ -465,7 +486,7 @@ class AppBase:
 
         # Try it with some magic
 
-        action_result["completed_at"] = int(time.time())
+        action_result["completed_at"] = int(time.time_ns())
         self.logger.info(f"""[DEBUG] Inside Send result with status {action_result["status"]}""")
         #if isinstance(action_result, 
 
@@ -502,41 +523,61 @@ class AppBase:
         except Exception as e:
             print(f"[WARNING] Failed adding parameter for logs: {e}") 
 
-        # FIXME: Adding retries here.
         try:
             finished = False
             for i in range (0, 10):
+                # Random sleeptime between 0 and 1 second, with 0.1 increments
+                sleeptime = float(random.randint(0, 10) / 10)
+
                 try:
-                    ret = requests.post(url, headers=headers, json=action_result, timeout=10, verify=False)
+                    ret = requests.post(url, headers=headers, json=action_result, timeout=10, verify=False, proxies=self.proxy_config)
 
                     self.logger.info(f"[DEBUG] Result: {ret.status_code} (break on 200 or 201)")
                     if ret.status_code == 200 or ret.status_code == 201:
                         finished = True
                         break
                     else:
-                        self.logger.info(f"[ERROR] RESP: {ret.text}")
+                        self.logger.info(f"[ERROR] Bad resp {ret.status_code}: {ret.text}")
+                        time.sleep(sleeptime)
+
+                # Proxyerrror
+                except requests.exceptions.ProxyError as e:
+                    self.logger.info(f"[ERROR] Proxy error: {e}")
+                    self.proxy_config = {}
+                    continue
 
                 except requests.exceptions.RequestException as e:
                     self.logger.info(f"[DEBUG] Request problem: {e}")
-                    time.sleep(0.1)
+                    time.sleep(sleeptime)
+
+                    # Check if we have a read timeout. If we do, exit as we most likely sent the result without getting a good result
+                    if "Read timed out" in str(e):
+                        self.logger.warning(f"[WARNING] Read timed out: {e}")
+                        finished = True
+                        break
+
+                    if "Max retries exceeded with url" in str(e):
+                        self.logger.warning(f"[WARNING] Max retries exceeded with url: {e}")
+                        finished = True
+                        break
 
                     #time.sleep(5)
                     continue
                 except TimeoutError as e:
                     self.logger.info(f"[DEBUG] Timeout or request: {e}")
-                    time.sleep(0.1)
+                    time.sleep(sleeptime)
 
                     #time.sleep(5)
                     continue
                 except requests.exceptions.ConnectionError as e:
                     self.logger.info(f"[DEBUG] Connectionerror: {e}")
-                    time.sleep(0.1)
+                    time.sleep(sleeptime)
 
                     #time.sleep(5)
                     continue
                 except http.client.RemoteDisconnected as e:
                     self.logger.info(f"[DEBUG] Remote: {e}")
-                    time.sleep(0.1)
+                    time.sleep(sleeptime)
 
                     #time.sleep(5)
                     continue
@@ -553,8 +594,10 @@ class AppBase:
                 # Not sure why this would work tho :)
                 action_result["status"] = "FAILURE"
                 action_result["result"] = json.dumps({"success": False, "reason": "POST error: Failed connecting to %s over 10 retries to the backend" % url})
-                self.logger.info(f"[DEBUG] Before typeerror stream result - NOT finished after 10 requests")
-                ret = requests.post("%s%s" % (self.base_url, stream_path), headers=headers, json=action_result, verify=False)
+                self.logger.info(f"[ERROR] Before typeerror stream result - NOT finished after 10 requests")
+
+                self.send_result(action_result, {"Content-Type": "application/json", "Authorization": "Bearer %s" % self.authorization}, "/api/v1/streams")
+                return
         
             self.logger.info(f"""[DEBUG] Successful request result request: Status= {ret.status_code} & Response= {ret.text}. Action status: {action_result["status"]}""")
         except requests.exceptions.ConnectionError as e:
@@ -564,7 +607,7 @@ class AppBase:
             action_result["result"] = json.dumps({"success": False, "reason": "Typeerror when sending to backend URL %s" % url})
 
             self.logger.info(f"[DEBUG] Before typeerror stream result: {e}")
-            ret = requests.post("%s%s" % (self.base_url, stream_path), headers=headers, json=action_result, verify=False)
+            ret = requests.post("%s%s" % (self.base_url, stream_path), headers=headers, json=action_result, verify=False, proxies=self.proxy_config)
             #self.logger.info(f"[DEBUG] Result: {ret.status_code}")
             #if ret.status_code != 200:
             #    pr
@@ -693,7 +736,7 @@ class AppBase:
             #self.logger.info(f"RET: {ret.text}")
             #self.logger.info(f"ID: {ret.status_code}")
             url = f"{self.url}/api/v1/orgs/{org_id}/validate_app_values"
-            ret = requests.post(url, json=data, verify=False)
+            ret = requests.post(url, json=data, verify=False, proxies=self.proxy_config)
             if ret.status_code == 200:
                 json_value = ret.json()
                 if len(json_value["found"]) > 0: 
@@ -1003,7 +1046,7 @@ class AppBase:
                     "result": f"All {len(param_multiplier)} values were non-unique",
                     "started_at": self.start_time,
                     "status": "SKIPPED",
-                    "completed_at": int(time.time()),
+                    "completed_at": int(time.time_ns()),
                 }
 
                 self.send_result(self.action_result, {"Content-Type": "application/json", "Authorization": "Bearer %s" % self.authorization}, "/api/v1/streams")
@@ -1167,7 +1210,7 @@ class AppBase:
             "User-Agent": "Gsoc2 1.1.0",
         }
 
-        ret = requests.get("%s%s" % (self.url, get_path), headers=headers, verify=False)
+        ret = requests.get("%s%s" % (self.url, get_path), headers=headers, verify=False, proxies=self.proxy_config)
         return ret.json()
         #if ret1.status_code != 200:
         #    return {
@@ -1193,7 +1236,7 @@ class AppBase:
             "User-Agent": "Gsoc2 1.1.0",
         }
 
-        ret1 = requests.get("%s%s" % (self.url, get_path), headers=headers, verify=False)
+        ret1 = requests.get("%s%s" % (self.url, get_path), headers=headers, verify=False, proxies=self.proxy_config)
         if ret1.status_code != 200:
             return None 
 
@@ -1256,7 +1299,7 @@ class AppBase:
                 "User-Agent": "Gsoc2 1.1.0",
             }
 
-            ret1 = requests.get("%s%s" % (self.url, get_path), headers=headers, verify=False)
+            ret1 = requests.get("%s%s" % (self.url, get_path), headers=headers, verify=False, proxies=self.proxy_config)
             self.logger.info("RET1 (file get): %s" % ret1.text)
             if ret1.status_code != 200:
                 returns.append({
@@ -1267,7 +1310,7 @@ class AppBase:
                 continue
 
             content_path = "/api/v1/files/%s/content?execution_id=%s" % (item, full_execution["execution_id"])
-            ret2 = requests.get("%s%s" % (self.url, content_path), headers=headers, verify=False)
+            ret2 = requests.get("%s%s" % (self.url, content_path), headers=headers, verify=False, proxies=self.proxy_config)
             self.logger.info("RET2 (file get) done")
             if ret2.status_code == 200:
                 tmpdata = ret1.json()
@@ -1291,6 +1334,27 @@ class AppBase:
         else:
             return returns
 
+    def delete_cache(self, key):
+        org_id = self.full_execution["workflow"]["execution_org"]["id"]
+        url = "%s/api/v1/orgs/%s/delete_cache" % (self.url, org_id)
+
+        data = {
+            "workflow_id": self.full_execution["workflow"]["id"],
+            "execution_id": self.current_execution_id,
+            "authorization": self.authorization,
+            "org_id": org_id,
+            "key": key,
+        }
+
+        response = requests.post(url, json=data, verify=False, proxies=self.proxy_config)
+        try:
+            allvalues = response.json()
+            return json.dumps(allvalues)
+        except Exception as e:
+            self.logger.info("[ERROR} Failed to parse response from delete_cache: %s" % e)
+            #return response.json()
+            return json.dumps({"success": False, "reason": f"Failed to delete cache for key '{key}'"})
+
     def set_cache(self, key, value):
         org_id = self.full_execution["workflow"]["execution_org"]["id"]
         url = "%s/api/v1/orgs/%s/set_cache" % (self.url, org_id)
@@ -1303,14 +1367,14 @@ class AppBase:
             "value": str(value),
         }
 
-        response = requests.post(url, json=data, verify=False)
+        response = requests.post(url, json=data, verify=False, proxies=self.proxy_config)
         try:
             allvalues = response.json()
             allvalues["key"] = key
             allvalues["value"] = str(value)
             return allvalues
-        except:
-            self.logger.info("Value couldn't be parsed")
+        except Exception as e:
+            self.logger.info("[ERROR} Failed to parse response from set cache: %s" % e)
             #return response.json()
             return {"success": False}
 
@@ -1325,7 +1389,7 @@ class AppBase:
             "key": key,
         }
 
-        value = requests.post(url, json=data, verify=False)
+        value = requests.post(url, json=data, verify=False, proxies=self.proxy_config)
         try:
             allvalues = value.json()
             self.logger.info("VAL1: ", allvalues)
@@ -1379,7 +1443,7 @@ class AppBase:
                 self.logger.info(f"KeyError in file setup: {e}")
                 pass
 
-            ret = requests.post("%s%s" % (self.url, create_path), headers=headers, json=data, verify=False)
+            ret = requests.post("%s%s" % (self.url, create_path), headers=headers, json=data, verify=False, proxies=self.proxy_config)
             #self.logger.info(f"Ret CREATE: {ret.text}")
             cur_id = ""
             if ret.status_code == 200:
@@ -1411,7 +1475,7 @@ class AppBase:
             files={"gsoc2_file": (filename, curfile["data"])}
             #open(filename,'rb')}
 
-            ret = requests.post("%s%s" % (self.url, upload_path), files=files, headers=new_headers, verify=False)
+            ret = requests.post("%s%s" % (self.url, upload_path), files=files, headers=new_headers, verify=False, proxies=self.proxy_config)
             self.logger.info("Ret UPLOAD: %s" % ret.text)
             self.logger.info("Ret2 UPLOAD: %d" % ret.status_code)
 
@@ -1428,7 +1492,7 @@ class AppBase:
             "authorization": self.authorization,
             "execution_id": self.current_execution_id,
             "result": "",
-            "started_at": int(time.time()),
+            "started_at": int(time.time_ns()),
             "status": "EXECUTING"
         }
 
@@ -1508,7 +1572,8 @@ class AppBase:
                         "%s/api/v1/streams/results" % (self.base_url), 
                         headers=headers, 
                         json=tmpdata,
-                        verify=False
+                        verify=False,
+                        proxies=self.proxy_config,
                     )
 
                     if ret.status_code == 200:
@@ -1935,6 +2000,8 @@ class AppBase:
         # Parses JSON loops and such down to the item you're looking for
         # $nodename.#.id 
         # $nodename.data.#min-max.info.id
+        # $nodename.data.#1-max.info.id
+        # $nodename.data.#min-1.info.id
         def recurse_json(basejson, parsersplit):
             match = "#([0-9a-z]+):?-?([0-9a-z]+)?#?"
             try:
@@ -2051,6 +2118,8 @@ class AppBase:
                                     if (basejson[value].endswith("}") and basejson[value].endswith("}")) or (basejson[value].startswith("[") and basejson[value].endswith("]")):
                                         basejson = json.loads(basejson[value])
                                     else:
+                                        # Should we sanitize here?
+                                        self.logger.info("[DEBUG] VALUE TO SANITIZE?: %s" % basejson[value])
                                         return str(basejson[value]), False
                                 except json.decoder.JSONDecodeError as e:
                                     return str(basejson[value]), False
@@ -2099,7 +2168,6 @@ class AppBase:
             actionname_lower = parsersplit[0][1:].lower()
 
             #Actionname: Start_node
-            #print(f"\n[INFO] Actionname: {actionname_lower}")
 
             # 1. Find the action
             baseresult = ""
@@ -2277,10 +2345,13 @@ class AppBase:
                 #if len(template) > 100:
                 #    self.logger.info("[DEBUG] Running liquid with data of length %d" % len(template))
                 #self.logger.info(f"[DEBUG] Data: {template}")
-                run = Liquid(template, mode="wild", from_file=False, filters=gsoc2_filters.filters)
 
-                # Can't handle self yet (?)
-                ret = run.render(**globals())
+                all_globals = globals()
+                all_globals["self"] = self
+                run = Liquid(template, mode="wild", from_file=False, filters=gsoc2_filters.filters, globals=all_globals)
+
+                # Add locals that are missing to globals
+                ret = run.render()
                 return ret
             except jinja2.exceptions.TemplateNotFound as e:
                 self.logger.info(f"[ERROR] Liquid Template error: {e}")
@@ -2434,7 +2505,7 @@ class AppBase:
                     self.action_result["result"] = f"Failed to parse LiquidPy: {error_msg}"
                     print("[WARNING] Failed to set LiquidPy result")
 
-                self.action_result["completed_at"] = int(time.time())
+                self.action_result["completed_at"] = int(time.time_ns())
                 self.send_result(self.action_result, headers, stream_path)
 
                 self.logger.info(f"[ERROR] Sent FAILURE response to backend due to : {e}")
@@ -2526,6 +2597,27 @@ class AppBase:
         
             return data 
 
+        # Makes JSON string values into valid strings in JSON
+        # Mainly by removing newlines and such
+        def fix_json_string_value(value):
+            try:
+                value = value.replace("\r\n", "\\r\\n")
+                value = value.replace("\n", "\\n")
+                value = value.replace("\r", "\\r")
+
+                # Fix quotes in the string
+                value = value.replace("\\\"", "\"")
+                value = value.replace("\"", "\\\"")
+
+                value = value.replace("\\\'", "\'")
+                value = value.replace("\'", "\\\'")
+            except Exception as e:
+                print(f"[WARNING] Failed to fix json string value: {e}")
+
+            return value
+
+
+
         # Parses parameters sent to it and returns whether it did it successfully with the values found
         def parse_params(action, fullexecution, parameter, self):
             # Skip if it starts with $?
@@ -2589,6 +2681,20 @@ class AppBase:
                         value, is_loop = get_json_value(fullexecution, to_be_replaced) 
                         #self.logger.info(f"\n\nType of value: {type(value)}")
                         if isinstance(value, str):
+                            # Could we take it here?
+                            self.logger.info(f"[DEBUG] Got value %s for parameter {paramname}" % value)
+                            # Should check if there is are quotes infront of and after the to_be_replaced
+                            # If there are, then we need to sanitize the value
+                            # 1. Look for the to_be_replaced in the data
+                            # 2. Check if there is a quote infront of it and also if there are {} in the data to validate JSON
+                            # 3. If there are, sanitize!
+                            #if data.find(f'"{to_be_replaced}"') != -1 and data.find("{") != -1 and data.find("}") != -1:
+                            #    print(f"[DEBUG] Found quotes infront of and after {to_be_replaced}! This probably means it's JSON and should be sanitized.")
+                            #    returnvalue = fix_json_string_value(value)
+                            #    value = returnvalue
+
+
+
                             parameter["value"] = parameter["value"].replace(to_be_replaced, value)
                         elif isinstance(value, dict) or isinstance(value, list):
                             # Changed from JSON dump to str() 28.05.2021
@@ -2601,7 +2707,7 @@ class AppBase:
                             #    parameter["value"] = parameter["value"].replace(to_be_replaced, json.dumps(value))
                             #    self.logger.info("Failed parsing value as string?")
                         else:
-                            self.logger.info("[WARNING] Unknown type %s" % type(value))
+                            self.logger.error("[ERROR] Unknown type %s" % type(value))
                             try:
                                 parameter["value"] = parameter["value"].replace(to_be_replaced, json.dumps(value))
                             except json.decoder.JSONDecodeError as e:
@@ -2708,7 +2814,7 @@ class AppBase:
             return "", parameter["value"], is_loop
 
         def run_validation(sourcevalue, check, destinationvalue):
-            print("[DEBUG] Checking %s %s %s" % (sourcevalue, check, destinationvalue))
+            self.logger.info("[DEBUG] Checking %s '%s' %s" % (sourcevalue, check, destinationvalue))
 
             if check == "=" or check.lower() == "equals":
                 if str(sourcevalue).lower() == str(destinationvalue).lower():
@@ -2726,14 +2832,15 @@ class AppBase:
                 if destinationvalue.lower() in sourcevalue.lower():
                     return True
 
-            elif check.lower() == "is empty":
-                if len(sourcevalue) == 0:
-                    return True
+            elif check.lower() == "is empty" or check.lower() == "is_empty":
+                try:
+                    if len(json.loads(sourcevalue)) == 0:
+                        return True
+                except Exception as e:
+                    self.logger.info(f"[WARNING] Failed to check if empty as list: {e}")
 
-                if str(sourcevalue) == 0:
+                if len(str(sourcevalue)) == 0:
                     return True
-
-                return False
 
             elif check.lower() == "contains_any_of":
                 newvalue = [destinationvalue.lower()]
@@ -2750,7 +2857,6 @@ class AppBase:
                         print("[INFO] Found %s in %s" % (item, sourcevalue))
                         return True
                     
-                return False 
             elif check.lower() == "larger than" or check.lower() == "bigger than":
                 try:
                     if str(sourcevalue).isdigit() and str(destinationvalue).isdigit():
@@ -2758,9 +2864,23 @@ class AppBase:
                             return True
 
                 except AttributeError as e:
-                    print("[WARNING] Condition larger than failed with values %s and %s: %s" % (sourcevalue, destinationvalue, e))
-                    return False
+                    self.logger.info("[WARNING] Condition larger than failed with values %s and %s: %s" % (sourcevalue, destinationvalue, e))
+
+                try:
+                    destinationvalue = len(json.loads(destinationvalue))
+                except Exception as e:
+                    self.logger.info(f"[WARNING] Failed to convert destination to list: {e}")
+                try:
+                    # Check if it's a list in autocast and if so, check the length
+                    if len(json.loads(sourcevalue)) > int(destinationvalue):
+                        return True
+                except Exception as e:
+                    self.logger.info(f"[WARNING] Failed to check if larger than as list: {e}")
+
+
             elif check.lower() == "smaller than" or check.lower() == "less than":
+                self.logger.info("In smaller than check: %s %s" % (sourcevalue, destinationvalue))
+
                 try:
                     if str(sourcevalue).isdigit() and str(destinationvalue).isdigit():
                         if int(sourcevalue) < int(destinationvalue):
@@ -2768,12 +2888,27 @@ class AppBase:
 
                 except AttributeError as e:
                     print("[WARNING] Condition smaller than failed with values %s and %s: %s" % (sourcevalue, destinationvalue, e))
-                    return False
+
+                try:
+                    destinationvalue = len(json.loads(destinationvalue))
+                except Exception as e:
+                    self.logger.info(f"[WARNING] Failed to convert destination to list: {e}")
+
+                try:
+                    # Check if it's a list in autocast and if so, check the length
+                    if len(json.loads(sourcevalue)) < int(destinationvalue):
+                        return True
+                except Exception as e:
+                    self.logger.info(f"[WARNING] Failed to check if smaller than as list: {e}")
+
             elif check.lower() == "re" or check.lower() == "matches regex":
                 try:
-                    found = re.search(destinationvalue, sourcevalue)
+                    found = re.search(str(destinationvalue), str(sourcevalue))
                 except re.error as e:
-                    print("[WARNING] Regex error in condition: %s" % e)
+                    print("[WARNING] Regex error in condition (re.error): %s" % e)
+                    return False
+                except Exception as e:
+                    print("[WARNING] Regex error in condition (catchall): %s" % e)
                     return False
 
                 if found == None:
@@ -2781,7 +2916,7 @@ class AppBase:
 
                 return True
             else:
-                print("[DEBUG] Condition: can't handle %s yet. Setting to true" % check)
+                self.logger.error("[DEBUG] Condition: can't handle %s yet. Setting to true" % check)
 
             return False
 
@@ -2794,12 +2929,40 @@ class AppBase:
                 return True, ""
 
             # Startnode should always run - no need to check incoming
+            # Removed November 2023 due to people wanting startnode to also check
+            # This is to make it possible ot 
             try:
                 if action["id"] == fullexecution["start"]:
                     return True, ""
+
+                    # Need to validate if the source is a trigger or not
+                    # need to remove branches that are not from trigger to the startnode to make it all work
+                    #if "workflow" in fullexecution["workflow"] and "triggers" in fullexecution["workflow"]:
+                    #    cnt = 0
+                    #    found_branch_indexes = []
+                    #    for branch in fullexecution["workflow"]["branches"]:
+                    #        if branch["destination_id"] != action["id"]:
+                    #            continue
+
+                    #        # Check if the source is a trigger
+                    #        # if we can't find it as trigger, remove the branch 
+                    #        print("Found relevant branch: %s" % branch)
+                    #        for action in fullexecution["workflow"]["actions"]:
+                    #            if action["id"] == branch["source_id"]:
+                    #                found_branch_indexes.append(branch["source_id"])
+                    #                break
+
+                    #    if len(found_branch_indexes) > 0:
+                    #        for i in sorted(found_branch_indexes, reverse=True):
+                    #            fullexecution["workflow"]["branches"].pop(i)
+
+                    #        print("Removed %d branches" % len(found_branch_indexes))
+                    #else:
+                    #    print("[WARNING] No branches or triggers found in fullexecution for startnode")
             except Exception as error:
                 self.logger.info(f"[WARNING] Failed checking startnode: {error}")
-                return True, ""
+                #return True, ""
+                #return True, ""
 
             available_checks = [
                 "=",
@@ -2818,6 +2981,8 @@ class AppBase:
                 "contains_any_of",
                 "re",
                 "matches regex",
+                "is empty",
+                "is_empty",
             ]
 
             relevantbranches = []
@@ -2877,7 +3042,7 @@ class AppBase:
                     destinationvalue = parse_wrapper_start(destinationvalue, self)
 
                     if not condition["condition"]["value"] in available_checks:
-                        self.logger.warning("Skipping %s %s %s because %s is invalid." % (sourcevalue, condition["condition"]["value"], destinationvalue, condition["condition"]["value"]))
+                        self.logger.error("[ERROR] Skipping '%s' -> %s -> '%s' because %s is invalid." % (sourcevalue, condition["condition"]["value"], destinationvalue, condition["condition"]["value"]))
                         continue
 
                     # Configuration = negated because of WorkflowAppActionParam..
@@ -2942,7 +3107,7 @@ class AppBase:
             self.logger.info("Failed one or more branch conditions.")
             self.action_result["result"] = tmpresult
             self.action_result["status"] = "SKIPPED"
-            self.action_result["completed_at"] = int(time.time())
+            self.action_result["completed_at"] = int(time.time_ns())
 
             self.send_result(self.action_result, headers, stream_path)
             return
@@ -2967,7 +3132,7 @@ class AppBase:
                 self.action_result["result"] = json.dumps({
                     "success": False,
                     "reason": f"Function {actionname} doesn't exist, or the App is out of date.",
-                    "details": "If this persists, please restart delete the Docker image locally, restart your Orborus instance and then try again to force-download the latest version. Contact support@soc2.khulnasoft.com with this data if the issue persists.",
+                    "details": "If this persists, please restart delete the Docker image locally, restart your Orborus instance and then try again to force-download the latest version. Contact support@gsoc2r.io with this data if the issue persists.",
                 })
             elif callable(func):
                 try:
@@ -3428,7 +3593,7 @@ class AppBase:
                                 self.logger.info("[WARNING] SHOULD STOP EXECUTION BECAUSE FIELDS AREN'T UNIQUE")
                                 self.action_result["status"] = "SKIPPED"
                                 self.action_result["result"] = f"A non-unique value was found"  
-                                self.action_result["completed_at"] = int(time.time())
+                                self.action_result["completed_at"] = int(time.time_ns())
                                 self.send_result(self.action_result, headers, stream_path)
                                 return
 
@@ -3470,7 +3635,7 @@ class AppBase:
                                 if iteration_count >= 10:
                                     newres = {
                                         "success": False,
-                                        "reason": "Iteration count more than 10. This happens if the input to the action is wrong. Try remaking the action, and contact support@soc2.khulnasoft.com if this persists.", 
+                                        "reason": "Iteration count more than 10. This happens if the input to the action is wrong. Try remaking the action, and contact support@gsoc2r.io if this persists.", 
                                         "details": found_error,
                                     }
                                     break
@@ -3483,11 +3648,18 @@ class AppBase:
                                     timeout = 30 
 
                                     # Check if current app is Gsoc2 Tools, then set to 55 due to certain actions being slow (ioc parser..) 
-                                    #uu In general, this should be disabled for onprem 
+                                    # In general, this should be disabled for onprem 
                                     if self.action["app_name"].lower() == "gsoc2 tools":
                                         timeout = 55
 
-                                    timeout = 30 
+                                    timeout_env = os.getenv("GSOC2_APP_SDK_TIMEOUT", timeout)
+                                    try:
+                                        timeout = int(timeout_env)
+                                        self.logger.info(f"[DEBUG] Timeout set to {timeout} seconds")  
+                                    except Exception as e:
+                                        self.logger.info(f"[WARNING] Failed parsing timeout to int: {e}")
+
+                                    #timeout = 30 
 
                                     try:
                                         executor = concurrent.futures.ThreadPoolExecutor()
@@ -3499,7 +3671,7 @@ class AppBase:
                                             future.cancel()
                                             newres = json.dumps({
                                                 "success": False,
-                                                "reason": "Timeout error within %d seconds. This happens if we can't reach or use the API you're trying to use within the time limit." % timeout,
+                                                "reason": "Timeout error within %d seconds (1). This happens if we can't reach or use the API you're trying to use within the time limit. Configure GSOC2_APP_SDK_TIMEOUT=100 in Orborus to increase it to 100 seconds. Not changeable for cloud." % timeout,
                                                 "exception": str(e),
                                             })
 
@@ -3512,40 +3684,13 @@ class AppBase:
                                     except concurrent.futures.TimeoutError as e:
                                         newres = json.dumps({
                                             "success": False,
-                                            "reason": "Timeout error within %d seconds (2). This happens if we can't reach or use the API you're trying to use within the time limit" % timeout
+                                            "reason": "Timeout error within %d seconds (2). This happens if we can't reach or use the API you're trying to use within the time limit. Configure GSOC2_APP_SDK_TIMEOUT=100 in Orborus to increase it to 100 seconds. Not changeable for cloud." % timeout,
                                         })
 
                                     break
-
-
-
-                                    #thread = threading.Thread(target=func, args=(**params,))
-                                    #thread.start()
-
-                                    #thread.join(timeout)
-
-                                    #if thread.is_alive():
-                                    #    # The thread is still running, so we need to stop it
-                                    #    # You can handle this as needed, such as raising an exception
-                                    #    timeout_handler()
-
-
-                                    #with Timeout(timeout):
-                                    #    newres = func(**params)
-                                    #    break
-                                    #except Timeout.Timeout as e:
-                                    #    self.logger.info(f"[DEBUG] Timeout error: {e}")
-                                    #    newres = json.dumps({
-                                    #        "success": False,
-                                    #        "reason": "Timeout error within %d seconds. This typically happens if we can't reach the API you're trying to reach." % timeout,
-                                    #        "exception": str(e),
-                                    #    })
-
-                                    #    break
-
                                 except TypeError as e:
                                     newres = ""
-                                    self.logger.info(f"[DEBUG] Got exec type error: {e}")
+                                    self.logger.info(f"[ERROR] Got function exec type error: {e}")
                                     try:
                                         e = json.loads(f"{e}")
                                     except:
@@ -3556,15 +3701,11 @@ class AppBase:
 
                                     if "the JSON object must be" in errorstring:
                                         self.logger.info("[ERROR] Something is wrong with the input for this function. Are lists and JSON data handled parsed properly (0)? the JSON object must be in...")
-                                        try:
-                                            e = json.loads(f"{e}")
-                                        except:
-                                            e = f"{e}"
 
                                         newres = json.dumps({
                                             "success": False,
-                                            "reason": "An exception occurred while running this function (1). See exception for more details and contact support if this persists (support@soc2.khulnasoft.com)",
-                                            "exception": e,
+                                            "reason": "An exception occurred while running this function (1). See exception for more details and contact support if this persists (support@gsoc2r.io)",
+                                            "exception": f"{type(e).__name__} - {e}",
                                         })
                                         break
                                     elif "got an unexpected keyword argument" in errorstring:
@@ -3580,22 +3721,23 @@ class AppBase:
                                     else:
                                         newres = json.dumps({
                                             "success": False,
-                                            "reason": "You may be running an old version of this action. Try remaking the node, then contact us at support@soc2.khulnasoft.com if it doesn't work with all these details.",
+                                            "reason": "You may be running an old version of this action. Try remaking the node, then contact us at support@gsoc2r.io if it doesn't work with all these details.",
                                             "exception": f"TypeError: {e}",
                                         })
                                         break
                                 except Exception as e:
                                     self.logger.info(f"[ERROR] Something is wrong with the input for this function. Are lists and JSON data handled parsed properly (1)? err: {e}")
 
-                                    try:
-                                        e = json.loads(f"{e}")
-                                    except:
-                                        e = f"{e}"
+                                    #try:
+                                    #    e = json.loads(f"{e}")
+                                    #except:
+                                    #    e = f"{e}"
 
                                     newres = json.dumps({
                                         "success": False,
-                                        "reason": "An exception occurred while running this function (2). See exception for more details and contact support if this persists (support@soc2.khulnasoft.com)",
-                                        "exception": e,
+                                        "reason": "An exception occurred while running this function (2). See exception for more details and contact support if this persists (support@gsoc2r.io)",
+                                        "exception": f"{type(e).__name__} - {e}",
+                                        
                                     })
                                     break
 
@@ -3779,7 +3921,7 @@ class AppBase:
             })
 
         # Send the result :)
-        self.action_result["completed_at"] = int(time.time())
+        self.action_result["completed_at"] = int(time.time_ns())
         self.send_result(self.action_result, headers, stream_path)
 
         #try:

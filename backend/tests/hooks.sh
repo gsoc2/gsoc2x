@@ -17,10 +17,10 @@
 ## GET HOOK
 #curl http://localhost:5001/api/v1/hooks/b4ba07c9-45d4-41f2-b260-83c8e99eba0c -H "Authorization: Bearer "
 
-#curl https://soc2.khulnasoft.com/api/v1/hooks/b4ba07c9-45d4-41f2-b260-83c8e99eba0c -H "Authorization: Bearer "
+#curl https://gsoc2r.io/api/v1/hooks/b4ba07c9-45d4-41f2-b260-83c8e99eba0c -H "Authorization: Bearer "
 
 
 #curl -X POST "https://europe-west1-gsoc2-241517.cloudfunctions.net/webhook_3ceff795-ce9a-43a2-a2f5-d4401a6e772d" -H "Authorization: Bearer 144308d0-6aab-4d4f-8bb2-75189281ee26" --data 'wut' 
-#curl POST "https://europe-west1-gsoc2.cloudfunctions.net/outlooktrigger_be4dbb0a-d396-4544-bc36-e57d1bdb2e40" -H "Authorization: Bearer 144308d0-6aab-4d4f-8bb2-75189281ee26" --data 'wut' -vvv
+#curl POST "https://europe-west1-gsoc2r.cloudfunctions.net/outlooktrigger_be4dbb0a-d396-4544-bc36-e57d1bdb2e40" -H "Authorization: Bearer 144308d0-6aab-4d4f-8bb2-75189281ee26" --data 'wut' -vvv
 
 curl -X POST "http://localhost:5002/api/v1/hooks/webhook_f22b5e54-e55d-48e5-a1d1-f40453513fd3" -H "Content-Type:application/json" --data '{"test": {"hello": "HEYOOOO"}}'

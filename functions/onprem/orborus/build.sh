@@ -1,5 +1,5 @@
 NAME=gsoc2-orborus
-VERSION=1.2.1
+VERSION=1.3.0
 
 echo "Running docker build with $NAME:$VERSION"
 #docker rmi gsoc2/gsoc2:$NAME --force

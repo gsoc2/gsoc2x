@@ -1,5 +1,5 @@
 #!/bin/sh
-# Created by Gsoc2, AS. <gsoc2@soc2.khulnasoft.com>.
+# Created by Gsoc2, AS. <gsoc2@gsoc2r.io>.
 
 WPYTHON_BIN="framework/python/bin/python3"
 

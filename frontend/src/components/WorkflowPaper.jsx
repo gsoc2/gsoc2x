@@ -8,7 +8,7 @@ import {
 	Avatar,
 	Grid,
 	Tooltip,
-} from "@material-ui/core";
+} from "@mui/material";
 
 import {
   AvatarGroup,
@@ -19,7 +19,7 @@ import {
 	Edit as EditIcon,
 	BubbleChart as BubbleChartIcon,
 	MoreVert as MoreVertIcon,
-} from '@material-ui/icons';
+} from '@mui/icons-material';
 
 import { useNavigate, Link, useParams } from "react-router-dom";
 
@@ -52,7 +52,7 @@ const WorkflowPaper = (props) => {
 
   	const isCloud =
 			window.location.host === "localhost:3002" ||
-			window.location.host === "soc2.khulnasoft.com";
+			window.location.host === "gsoc2r.io";
 
 		//console.log("Workflow: ", data)
     var boxColor = "#86c142";
@@ -102,7 +102,7 @@ const WorkflowPaper = (props) => {
 		}
 
 		if (!isCloud) {
-			parsedUrl = `https://soc2.khulnasoft.com${parsedUrl}`
+			parsedUrl = `https://gsoc2r.io${parsedUrl}`
 		}
 
     return (
@@ -277,7 +277,7 @@ const WorkflowPaper = (props) => {
             >
               {data.tags !== undefined && data.tags !== null 
                 ? data.tags.map((tag, index) => {
-                    if (index >= 3) {
+                    if (index >= 2) {
                       return null;
                     }
 

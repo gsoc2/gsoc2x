@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-import { Typography, CircularProgress } from "@material-ui/core";
+import { Typography, CircularProgress } from "@mui/material";
 import theme from '../theme.jsx';
 
 const SetAuthentication = (props) => {
@@ -322,7 +322,7 @@ const SetAuthentication = (props) => {
         {failed ? "Failed setup. Error: " : ""} {response}
 				<br/>
 				<br/>
-        {failed ? "If the error persists, try to use fewer scopes. Contact our support at support@soc2.khulnasoft.com if you need further assistance. You may close this window." : ""}
+        {failed ? "If the error persists, try to use fewer scopes. Contact our support at support@gsoc2r.io if you need further assistance. You may close this window." : ""}
       </Typography>
     </div>
   );

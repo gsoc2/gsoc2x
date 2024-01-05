@@ -5,9 +5,10 @@ import {
 	Typography, 
 	CircularProgress,
 	Button,
-} from "@material-ui/core";
+} from "@mui/material";
 import theme from '../theme.jsx';
-import { useAlert } from "react-alert";
+//import { useAlert
+import { ToastContainer, toast } from "react-toastify" 
 
 import AuthenticationOauth2 from "../components/Oauth2Auth.jsx";
 import AuthenticationWindow from "../components/AuthenticationWindow.jsx";
@@ -21,11 +22,11 @@ const SetAuthentication = (props) => {
   const [loadFail, setLoadFail] = useState("");
   const [appAuthentication, setAppAuthentication] = React.useState([]);
 
-  const isCloud = window.location.host === "localhost:3002" || window.location.host === "soc2.khulnasoft.com";
-  const alert = useAlert();
+  const isCloud = window.location.host === "localhost:3002" || window.location.host === "gsoc2r.io";
+  //const alert = useAlert();
 
   const parseIncomingOpenapiData = (data) => {
-    if (data.app === undefined || data.app === null) {
+    	if (data.app === undefined || data.app === null) {
 			return 
 		} 
 
@@ -42,11 +43,11 @@ const SetAuthentication = (props) => {
 		parsedapp.name = parsedapp.name.replaceAll("_", " ");
 		setApp(parsedapp);
 
-    document.title = parsedapp.name + " App Auth";
+		document.title = parsedapp.name + " App Auth";
 
 	}
 
-	console.log("App: ", app)
+  console.log("App: ", app)
 
   const getApp = (appid) => {
     if (serverside === true) {
@@ -63,28 +64,28 @@ const SetAuthentication = (props) => {
     })
       .then((response) => {
         if (response.status !== 200) {
-					if (isCloud) {
-						ReactGA.event({
-							category: "appauth",
-							action: `app_not_found`,
-							label: appid,
-						});
-					}
+			if (isCloud) {
+				ReactGA.event({
+					category: "appauth",
+					action: `app_not_found`,
+					label: appid,
+				});
+			}
         } else {
-					if (isCloud) {
-						ReactGA.event({
-							category: "appauth",
-							action: `app_found`,
-							label: appid,
-						});
-					}
+			if (isCloud) {
+				ReactGA.event({
+					category: "appauth",
+					action: `app_found`,
+					label: appid,
+				});
+			}
         }
 
         return response.json();
       })
       .then((responseJson) => {
         if (responseJson.success === false || responseJson.success === undefined) {
-          alert.error("Failed to get the app. Does it exist?")
+          toast("Failed to get the app. Does it exist?")
           setIsAppLoaded(true)
           return;
         }
@@ -92,7 +93,7 @@ const SetAuthentication = (props) => {
 				parseIncomingOpenapiData(responseJson);
       })
       .catch((error) => {
-        alert.error("Error in app fetch: " + error.toString());
+        toast("Error in app fetch: " + error.toString());
       });
   };
 
@@ -104,7 +105,7 @@ const SetAuthentication = (props) => {
 			setLoadFail(
 				<span>
 					<Typography variant="h4">
-						Failed to load the app. Please contact your provider or support@soc2.khulnasoft.com if this persists
+						Failed to load the app. Please contact your provider or support@gsoc2r.io if this persists
 					</Typography>
 					<Button 
 						variant="contained"

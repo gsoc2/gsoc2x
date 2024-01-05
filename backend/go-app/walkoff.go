@@ -29,7 +29,7 @@ import (
 	uuid "github.com/satori/go.uuid"
 
 	newscheduler "github.com/carlescere/scheduler"
-	"github.com/gsoc2/kin-openapi/openapi3"
+	"github.com/frikky/kin-openapi/openapi3"
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/go-git/go-git/v5"
@@ -561,7 +561,7 @@ func handleGetStreamResults(resp http.ResponseWriter, request *http.Request) {
 		}
 
 		if len(workflowExecution.ExecutionOrg) > 0 && user.ActiveOrg.Id == workflowExecution.ExecutionOrg && user.Role == "admin" {
-			log.Printf("[DEBUG] User %s is in correct org. Allowing org continuation for execution!", user.Username)
+			//log.Printf("[DEBUG] User %s is in correct org. Allowing org continuation for execution!", user.Username)
 		} else {
 			log.Printf("[WARNING] Bad authorization key when getting stream results %s.", actionResult.ExecutionId)
 			resp.WriteHeader(401)
@@ -700,70 +700,13 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
-	/*
-		// Removed as UserInput is now handled as an app
-			if actionResult.Status == "WAITING" && actionResult.Action.AppName == "User Input" {
-				log.Printf("[INFO] SHOULD WAIT A BIT AND RUN USER INPUT! WAITING!")
-
-				var trigger gsoc2.Trigger
-				err = json.Unmarshal([]byte(actionResult.Result), &trigger)
-				if err != nil {
-					log.Printf("[WARNING] Failed unmarshaling actionresult for user input: %s", err)
-					resp.WriteHeader(401)
-					resp.Write([]byte(`{"success": false}`))
-					return
-				}
-
-				orgId := workflowExecution.ExecutionOrg
-				if len(workflowExecution.OrgId) == 0 && len(workflowExecution.Workflow.OrgId) > 0 {
-					orgId = workflowExecution.Workflow.OrgId
-				}
-
-				err := handleUserInput(trigger, orgId, workflowExecution.Workflow.ID, workflowExecution.ExecutionId)
-				if err != nil {
-					log.Printf("[WARNING] Failed userinput handler: %s", err)
-
-					actionResult.Result = fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)
-
-					workflowExecution.Results = append(workflowExecution.Results, actionResult)
-					workflowExecution.Status = "ABORTED"
-					err = gsoc2.SetWorkflowExecution(ctx, *workflowExecution, true)
-					if err != nil {
-						log.Printf("[WARNING] Failed to set execution during wait: %s", err)
-					} else {
-						log.Printf("[INFO] Successfully set the execution %s to waiting.", workflowExecution.ExecutionId)
-					}
-
-					resp.WriteHeader(401)
-					resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Error: %s"}`, err)))
-					return
-				} else {
-					log.Printf("[INFO] Successful userinput handler")
-					resp.WriteHeader(200)
-					resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "CLOUD IS DONE"}`)))
-
-					actionResult.Result = `{"success": True, "reason": "Waiting for user feedback based on configuration"}`
-
-					workflowExecution.Results = append(workflowExecution.Results, actionResult)
-					workflowExecution.Status = actionResult.Status
-					err = gsoc2.SetWorkflowExecution(ctx, *workflowExecution, true)
-					if err != nil {
-						log.Printf("[WARNING] Failed setting userinput: %s", err)
-					} else {
-						log.Printf("[DEBUG] Successfully set the execution to waiting.")
-					}
-				}
-
-				return
-			}
-	*/
-
 	runWorkflowExecutionTransaction(ctx, 0, workflowExecution.ExecutionId, actionResult, resp)
 }
 
 // Will make sure transactions are always ran for an execution. This is recursive if it fails. Allowed to fail up to 5 times
 func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workflowExecutionId string, actionResult gsoc2.ActionResult, resp http.ResponseWriter) {
-	log.Printf("[DEBUG] Running workflow execution transaction for %s", workflowExecutionId)
+	log.Printf("[DEBUG][%s] Running workflow execution update", workflowExecutionId)
+
 
 	// Should start a tx for the execution here
 	workflowExecution, err := gsoc2.GetWorkflowExecution(ctx, workflowExecutionId)
@@ -992,6 +935,7 @@ func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 
 	cacheKey := fmt.Sprintf("%s_workflows", user.Id)
 	gsoc2.DeleteCache(ctx, cacheKey)
+	gsoc2.DeleteCache(ctx, fmt.Sprintf("%s_workflows", user.ActiveOrg.Id))
 	log.Printf("[DEBUG] Cleared workflow cache for %s (%s)", user.Username, user.Id)
 
 	resp.WriteHeader(200)
@@ -1106,14 +1050,20 @@ func handleExecution(id string, workflow gsoc2.Workflow, request *http.Request, 
 
 	workflowExecution, execInfo, _, err := gsoc2.PrepareWorkflowExecution(ctx, workflow, request, 10)
 	if err != nil {
+		err = gsoc2.SetWorkflowExecution(ctx, workflowExecution, true)
+		if err != nil {
+			log.Printf("[ERROR] Failed setting workflow execution during init (2): %s", err)
+		}
+
 		if strings.Contains(fmt.Sprintf("%s", err), "User Input") {
 			// Special for user input callbacks
 			return workflowExecution, fmt.Sprintf("%s", err), nil
 		} else {
-			log.Printf("[WARNING] Failed in prepareExecution: %s", err)
+			log.Printf("[ERROR] Failed in prepareExecution: %s", err)
 			return gsoc2.WorkflowExecution{}, fmt.Sprintf("Failed starting workflow: %s", err), err
 		}
 	}
+
 
 	err = imageCheckBuilder(execInfo.ImageNames)
 	if err != nil {
@@ -1187,7 +1137,7 @@ func handleExecution(id string, workflow gsoc2.Workflow, request *http.Request, 
 		var execution gsoc2.ExecutionRequest
 		err = json.Unmarshal(body, &execution)
 		if err != nil {
-			log.Printf("[WARNING] Failed execution POST unmarshaling - continuing anyway: %s", err)
+			log.Printf("[WARNING] Failed execution POST unmarshalling for execution %s - continuing anyway: %s", execution.ExecutionId, err)
 			//return gsoc2.WorkflowExecution{}, "", err
 		}
 
@@ -1390,13 +1340,10 @@ func handleExecution(id string, workflow gsoc2.Workflow, request *http.Request, 
 
 	childNodes := gsoc2.FindChildNodes(workflowExecution, workflowExecution.Start, []string{}, []string{})
 
-	//topic := "workflows"
 	startFound := false
-	// FIXME - remove this?
 	newActions := []gsoc2.Action{}
 	defaultResults := []gsoc2.ActionResult{}
 
-	allAuths := []gsoc2.AppAuthenticationStorage{}
 	for _, action := range workflowExecution.Workflow.Actions {
 		//action.LargeImage = ""
 		if action.ID == workflowExecution.Start {
@@ -1406,98 +1353,6 @@ func handleExecution(id string, workflow gsoc2.Workflow, request *http.Request, 
 
 		if action.Environment == "" {
 			return gsoc2.WorkflowExecution{}, fmt.Sprintf("Environment is not defined for %s", action.Name), errors.New("Environment not defined!")
-		}
-
-		// FIXME: Authentication parameters
-		if len(action.AuthenticationId) > 0 {
-			if len(allAuths) == 0 {
-				allAuths, err = gsoc2.GetAllWorkflowAppAuth(ctx, workflow.ExecutingOrg.Id)
-				if err != nil {
-					log.Printf("Api authentication failed in get all app auth: %s", err)
-					return gsoc2.WorkflowExecution{}, fmt.Sprintf("Api authentication failed in get all app auth: %s", err), err
-				}
-			}
-
-			curAuth := gsoc2.AppAuthenticationStorage{Id: ""}
-			for _, auth := range allAuths {
-				if auth.Id == action.AuthenticationId {
-					curAuth = auth
-					break
-				}
-			}
-
-			if len(curAuth.Id) == 0 {
-				return gsoc2.WorkflowExecution{}, fmt.Sprintf("Auth ID %s doesn't exist", action.AuthenticationId), errors.New(fmt.Sprintf("Auth ID %s doesn't exist", action.AuthenticationId))
-			}
-
-			if curAuth.Encrypted {
-				setField := true
-				newFields := []gsoc2.AuthenticationStore{}
-				for _, field := range curAuth.Fields {
-					parsedKey := fmt.Sprintf("%s_%d_%s_%s", curAuth.OrgId, curAuth.Created, curAuth.Label, field.Key)
-					newValue, err := gsoc2.HandleKeyDecryption([]byte(field.Value), parsedKey)
-					if err != nil {
-						log.Printf("[WARNING] Failed decryption for %s: %s", field.Key, err)
-						setField = false
-						break
-					}
-
-					field.Value = string(newValue)
-					newFields = append(newFields, field)
-				}
-
-				if setField {
-					curAuth.Fields = newFields
-				}
-			} else {
-				log.Printf("[INFO] AUTH IS NOT ENCRYPTED - attempting encrypting!")
-				err = gsoc2.SetWorkflowAppAuthDatastore(ctx, curAuth, curAuth.Id)
-				if err != nil {
-					log.Printf("[WARNING] Failed running encryption during execution: %s", err)
-				}
-			}
-
-			newParams := []gsoc2.WorkflowAppActionParameter{}
-			if strings.ToLower(curAuth.Type) == "oauth2" {
-				log.Printf("[DEBUG] Should replace auth parameters (Oauth2)")
-
-				for _, param := range curAuth.Fields {
-					if param.Key == "expiration" {
-						continue
-					}
-
-					newParams = append(newParams, gsoc2.WorkflowAppActionParameter{
-						Name:  param.Key,
-						Value: param.Value,
-					})
-				}
-
-				for _, param := range action.Parameters {
-					//log.Printf("Param: %#v", param)
-					if param.Configuration {
-						continue
-					}
-
-					newParams = append(newParams, param)
-				}
-			} else {
-				// Rebuild params with the right data. This is to prevent issues on the frontend
-				for _, param := range action.Parameters {
-
-					for _, authparam := range curAuth.Fields {
-						if param.Name == authparam.Key {
-							param.Value = authparam.Value
-							//log.Printf("Name: %s - value: %s", param.Name, param.Value)
-							//log.Printf("Name: %s - value: %s\n", param.Name, param.Value)
-							break
-						}
-					}
-
-					newParams = append(newParams, param)
-				}
-			}
-
-			action.Parameters = newParams
 		}
 
 		action.LargeImage = ""
@@ -1715,6 +1570,11 @@ func handleExecution(id string, workflow gsoc2.Workflow, request *http.Request, 
 		workflowExecution.ExecutionOrg = workflow.ExecutingOrg.Id
 	}
 
+	err = gsoc2.SetWorkflowExecution(ctx, workflowExecution, true)
+	if err != nil {
+		log.Printf("[ERROR] Failed setting workflow execution during init (2): %s", err)
+	}
+
 	var allEnvs []gsoc2.Environment
 	if len(workflowExecution.ExecutionOrg) > 0 {
 		//log.Printf("[INFO] Executing ORG: %s", workflowExecution.ExecutionOrg)
@@ -1795,7 +1655,6 @@ func handleExecution(id string, workflow gsoc2.Workflow, request *http.Request, 
 		return gsoc2.WorkflowExecution{}, "Failed building missing Docker images", err
 	}
 
-	//Org               []Org    `json:"org,omitempty" datastore:"org"`
 	err = gsoc2.SetWorkflowExecution(ctx, workflowExecution, true)
 	if err != nil {
 		log.Printf("[WARNING] Error saving workflow execution for updates %s", err)
@@ -1808,7 +1667,7 @@ func handleExecution(id string, workflow gsoc2.Workflow, request *http.Request, 
 		// FIXME - tmp name based on future companyname-companyId
 		// This leads to issues with overlaps. Should set limits and such instead
 		for _, environment := range execInfo.Environments {
-			log.Printf("[INFO] Execution: %s should execute onprem with execution environment \"%s\". Workflow: %s", workflowExecution.ExecutionId, environment, workflowExecution.Workflow.ID)
+			log.Printf("[INFO][%s] Execution: should execute onprem with execution environment \"%s\". Workflow: %s", workflowExecution.ExecutionId, environment, workflowExecution.Workflow.ID)
 
 			executionRequest := gsoc2.ExecutionRequest{
 				ExecutionId:   workflowExecution.ExecutionId,
@@ -1844,6 +1703,8 @@ func handleExecution(id string, workflow gsoc2.Workflow, request *http.Request, 
 			return gsoc2.WorkflowExecution{}, "Cloud not implemented yet", errors.New("Cloud not implemented yet")
 		}
 
+		gsoc2.IncrementCache(ctx, workflowExecution.OrgId, "workflow_executions_cloud")
+
 		// What it needs to know:
 		// 1. Parameters
 		if len(workflowExecution.Workflow.Actions) == 1 {
@@ -1857,13 +1718,11 @@ func handleExecution(id string, workflow gsoc2.Workflow, request *http.Request, 
 			// If worker, should this backend be a proxy? I think so.
 			return gsoc2.WorkflowExecution{}, "Cloud not implemented yet (2)", errors.New("Cloud not implemented yet")
 		}
+	} else {
+		gsoc2.IncrementCache(ctx, workflowExecution.OrgId, "workflow_executions_onprem")
 	}
 
-	//err = increaseStatisticsField(ctx, "workflow_executions", workflow.ID, 1, workflowExecution.ExecutionOrg)
-	//if err != nil {
-	//	log.Printf("Failed to increase stats execution stats: %s", err)
-	//}
-
+	gsoc2.IncrementCache(ctx, workflowExecution.OrgId, "workflow_executions")
 	return workflowExecution, "", nil
 }
 
@@ -3501,17 +3360,35 @@ func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	workflowExecution.Priority = 10
+
+	workflowExecution.Priority = 11
 	environments, err := gsoc2.GetEnvironments(ctx, user.ActiveOrg.Id)
 	environment := "Gsoc2"
 	if len(environments) >= 1 {
+		// Find default one
 		environment = environments[0].Name
+
+		for _, env := range environments {
+			if env.Default {
+				environment = env.Name
+				break
+			}
+		}
+
 	} else {
 		log.Printf("[ERROR] No environments found for org %s. Exiting", user.ActiveOrg.Id)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
 	}
+
+	// Enforcing same env for job + run to be default
+	// FIXME: Should use environment that is in the source workflow if it exists
+	for i, _ := range workflowExecution.Workflow.Actions {
+		workflowExecution.Workflow.Actions[i].Environment = environment
+		workflowExecution.Workflow.Actions[i].Label = "TMP" 
+	}
+	gsoc2.SetWorkflowExecution(ctx, workflowExecution, false)
 
 	log.Printf("[INFO] Execution (single action): %s should execute onprem with execution environment \"%s\". Workflow: %s", workflowExecution.ExecutionId, environment, workflowExecution.Workflow.ID)
 
@@ -3520,6 +3397,7 @@ func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
 		WorkflowId:    workflowExecution.Workflow.ID,
 		Authorization: workflowExecution.Authorization,
 		Environments:  []string{environment},
+		Priority:      11,
 	}
 
 	executionRequest.Priority = workflowExecution.Priority
@@ -3539,6 +3417,9 @@ func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
 	if err != nil {
 		log.Printf("[ERROR] Failed to marshal retStruct in single execution: %s", err)
 	}
+
+	// Deleting as this is a single action and doesn't need to be stored
+	gsoc2.DeleteKey(ctx, "workflowexecution", executionRequest.ExecutionId)
 
 	resp.WriteHeader(200)
 	resp.Write([]byte(returnBytes))
@@ -4135,4 +4016,161 @@ func checkWorkflowApp(workflowApp gsoc2.WorkflowApp) error {
 	}
 
 	return nil
+}
+
+func checkUnfinishedExecution(resp http.ResponseWriter, request *http.Request) {
+	cors := gsoc2.HandleCors(resp, request)
+	if cors {
+		return
+	}
+
+	location := strings.Split(request.URL.String(), "/")
+	var fileId string
+	if location[1] == "api" {
+		if len(location) <= 4 {
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
+
+		fileId = location[4]
+	}
+
+	if len(fileId) != 36 {
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Workflow ID to abort is not valid"}`))
+		return
+	}
+
+	executionId := location[6]
+	if len(executionId) != 36 {
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "ExecutionID not valid"}`))
+		return
+	}
+
+	ctx := gsoc2.GetContext(request)
+	exec, err := gsoc2.GetWorkflowExecution(ctx, executionId)
+	if err != nil {
+		log.Printf("[ERROR] Failed getting execution (rerun workflow - 1) %s: %s", executionId, err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed getting execution ID %s because it doesn't exist (abort)."}`, executionId)))
+		return
+	}
+
+	apikey := request.Header.Get("Authorization")
+	parsedKey := ""
+	if strings.HasPrefix(apikey, "Bearer ") {
+		apikeyCheck := strings.Split(apikey, " ")
+		if len(apikeyCheck) == 2 {
+			parsedKey = apikeyCheck[1]
+		}
+	}
+
+	// ONLY allowed to run automatically with the same auth (july 2022)
+	if exec.Authorization != parsedKey {
+		user, err := gsoc2.HandleApiAuthentication(resp, request)
+		if err != nil {
+			log.Printf("[ERROR][%s] Bad authorization key for execution (rerun workflow - 3): %s", executionId, err)
+			resp.WriteHeader(403)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed because you're not authorized to see this workflow (3)."}`)))
+			return
+		}
+
+		// Check if user is in the correct org
+		if user.ActiveOrg.Id == exec.ExecutionOrg && user.Role != "org-reader" {
+			log.Printf("[AUDIT][%s] User %s (%s) is force continuing execution from org access", executionId, user.Username, user.Id)
+		} else if user.SupportAccess {
+			log.Printf("[AUDIT][%s] User %s (%s) is force continuing execution with support access", executionId, user.Username, user.Id)
+		} else {
+			log.Printf("[ERROR][%s] Bad authorization key for continue execution (rerun workflow - 2): %s", executionId, err)
+			resp.WriteHeader(403)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed because you're not authorized to see this workflow (2)."}`)))
+			return
+		}
+	}
+
+	// Meant as a function that periodically checks whether previous executions have finished or not.
+	// Should probably be based on executedIds and finishedIds
+	// Schedule a check in the future instead?
+
+	// Auth vs execution check!
+	extraInputs := 0
+	for _, trigger := range exec.Workflow.Triggers {
+		if trigger.Name == "User Input" && trigger.AppName == "User Input" {
+			extraInputs += 1
+
+			//exec.Workflow.Actions = append(exec.Workflow.Actions, gsoc2.Action{
+			//	ID:    trigger.ID,
+			//	Label: trigger.Label,
+			//	Name:  trigger.Name,
+			//})
+		} else if trigger.Name == "Gsoc2 Workflow" && trigger.AppName == "Gsoc2 Workflow" {
+			extraInputs += 1
+
+			//exec.Workflow.Actions = append(exec.Workflow.Actions, gsoc2.Action{
+			//	ID:    trigger.ID,
+			//	Label: trigger.Label,
+			//	Name:  trigger.Name,
+			//})
+		}
+	}
+
+	if exec.Status != "ABORTED" && exec.Status != "FINISHED" && exec.Status != "FAILURE" {
+		log.Printf("[DEBUG][%s] Rechecking execution and its status to send to backend IF the status is EXECUTING (%s - %d/%d finished)", exec.ExecutionId, exec.Status, len(exec.Results), len(exec.Workflow.Actions)+extraInputs)
+	}
+
+	// Usually caused by issue during startup
+	if exec.Status == "" {
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "No status for the execution"}`)))
+		return
+	}
+
+	if exec.Status != "EXECUTING" {
+		resp.WriteHeader(200)
+		resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "Already finished"}`)))
+		return
+	}
+
+	// Force it back in the queue to be executed
+	if len(exec.Workflow.Actions) == 0 {
+		resp.WriteHeader(200)
+		resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "Not a cloud env workflow. Only rerunning cloud env."}`)))
+		return
+	}
+
+	log.Printf("[DEBUG][%s] Workflow: %s (%s)", exec.ExecutionId, exec.Workflow.Name, exec.Workflow.ID)
+	if exec.Workflow.ID == "" || exec.Workflow.Name == "" {
+		log.Printf("[ERROR][%s] No workflow ID found for execution", exec.ExecutionId)
+		gsoc2.DeleteKey(ctx, "workflowexecution", exec.ExecutionId)
+		resp.WriteHeader(200)
+		resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "No workflow name / ID found. Can't run. Contact support@gsoc2r.io if this persists."}`)))
+		return
+	}
+
+	environment := exec.Workflow.Actions[0].Environment
+	log.Printf("[DEBUG][%s] Not a cloud env workflow. Re-adding job in queue for env %s.", exec.ExecutionId, environment)
+
+	parsedEnv := fmt.Sprintf("%s_%s", strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(environment, " ", "-"), "_", "-")), exec.ExecutionOrg)
+	log.Printf("[DEBUG][%s] Adding new run job to env (2): %s", exec.ExecutionId, parsedEnv)
+
+	executionRequest := gsoc2.ExecutionRequest{
+		ExecutionId:   exec.ExecutionId,
+		WorkflowId:    exec.Workflow.ID,
+		Authorization: exec.Authorization,
+		Environments:  []string{environment},
+	}
+
+	// Increase priority on reruns to catch up
+	executionRequest.Priority = 11
+	err = gsoc2.SetWorkflowQueue(ctx, executionRequest, parsedEnv)
+	if err != nil {
+		log.Printf("[ERROR] Failed adding execution to db: %s", err)
+	}
+
+
+	resp.WriteHeader(200)
+	resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "Reran workflow in %s"}`, parsedEnv)))
+
 }
