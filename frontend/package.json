@@ -27,7 +27,7 @@
     "cytoscape-node-html-label": "^1.1.5",
     "d3": "^7.1.1",
     "dayjs": "^1.11.9",
-    "dotenv": "^6.1.0",
+    "dotenv": "^16.3.1",
     "downshift": "^3.3.5",
     "github-markdown-css": "^3.0.1",
     "import": "0.0.6",
