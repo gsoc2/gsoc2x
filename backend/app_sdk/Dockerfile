@@ -1,5 +1,5 @@
 #FROM python:3.9.1-alpine as base
-FROM python:3.10.0-alpine as base
+FROM python:3.13.0a3-alpine as base
 #FROM python:3.11.3-alpine as base
 
 FROM base as builder
