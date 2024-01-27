@@ -27,7 +27,7 @@ RUN go build
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o worker .
 
 ## ALPINE IMAGE
-FROM alpine:3.15.0
+FROM alpine:3.18.6
 
 ENV GSOC2_BASE_IMAGE_REGISTRY=ghcr.io
 ENV GSOC2_BASE_IMAGE_NAME=gsoc2/gsoc2
