@@ -23,4 +23,11 @@ FROM alpine:3.15.0
 RUN apk add --no-cache bash tzdata
 COPY --from=builder /app/ /
 
+ENV ENVIRONMENT_NAME=Gsoc2
+ENV BASE_URL=http://gsoc2-backend:5001
+ENV DOCKER_API_VERSION=1.39
+ENV GSOC2_OPENSEARCH_URL=https://opensearch:9200
+
+
+
 CMD ["./orborus"]

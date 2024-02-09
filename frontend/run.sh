@@ -10,9 +10,9 @@ docker tag ghcr.io/gsoc2/gsoc2-frontend:nightly ghcr.io/gsoc2/gsoc2-frontend:nig
 
 echo "Starting server"
 # Rerun build locally for it to update :)
-#docker run -it \
-#	-p 3001:80 \
-#	-p 3002:443 \
-#	-v $(pwd)/build:/usr/share/nginx/html:ro \
-#	--rm \
-#	nginx	
+docker run -it \
+	-p 3001:80 \
+	-p 3002:443 \
+	-v $(pwd)/build:/usr/share/nginx/html:ro \
+	--rm \
+	ghcr.io/gsoc2/gsoc2-frontend:nightly

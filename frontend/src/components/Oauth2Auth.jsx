@@ -1,8 +1,8 @@
 import React, { useRef, useState, useEffect, useLayoutEffect } from "react";
+import { toast } from 'react-toastify';
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { useTheme } from "@material-ui/core/styles";
 import theme from '../theme.jsx';
-import { useAlert } from "react-alert";
+//import { useAlert 
 
 import { v4 as uuidv4 } from "uuid";
 import {
@@ -38,7 +38,8 @@ import {
   CircularProgress,
   Switch,
   Fade,
-} from "@material-ui/core";
+} from "@mui/material";
+
 import { 
 	LockOpen as LockOpenIcon,
 	SupervisorAccount as SupervisorAccountIcon,
@@ -71,6 +72,7 @@ const registeredApps = [
 	"todoist",
 	"microsoft_sentinel",
 	"microsoft_365_defender",
+	"google_chat",
 	"google_sheets",
 	"google_drive",
 	"google_disk",
@@ -91,14 +93,14 @@ const AuthenticationOauth2 = (props) => {
     appAuthentication,
     setSelectedAction,
     setNewAppAuth,
-		isCloud,
-		autoAuth, 
-		authButtonOnly, 
-		isLoggedIn,
+	isCloud,
+	autoAuth, 
+	authButtonOnly, 
+	isLoggedIn,
   } = props;
 
   let navigate = useNavigate();
-  const alert = useAlert()
+  //const alert = useAlert()
 
   //const [update, setUpdate] = React.useState("|")
   const [defaultConfigSet, setDefaultConfigSet] = React.useState(
@@ -110,20 +112,19 @@ const AuthenticationOauth2 = (props) => {
       authenticationType.client_secret.length > 0
   );	
 
-  const [clientId, setClientId] = React.useState(
-    defaultConfigSet ? authenticationType.client_id : ""
-  );
-  const [clientSecret, setClientSecret] = React.useState(
-    defaultConfigSet ? authenticationType.client_secret : ""
-  );
+  const [clientId, setClientId] = React.useState(defaultConfigSet ? authenticationType.client_id : "");
+  const [clientSecret, setClientSecret] = React.useState(defaultConfigSet ? authenticationType.client_secret : "");
+
+  const [username, setUsername] = React.useState("");
+  const [password, setPassword] = React.useState("");
+  
   const [oauthUrl, setOauthUrl] = React.useState("");
   const [buttonClicked, setButtonClicked] = React.useState(false);
-
   const [offlineAccess, setOfflineAccess] = React.useState(true);
-  const allscopes = authenticationType.scope !== undefined ? authenticationType.scope : [];
     
+  const allscopes = authenticationType.scope !== undefined && authenticationType.scope !== null ? authenticationType.scope : [];
+  const [selectedScopes, setSelectedScopes] = React.useState(allscopes !== null && allscopes !== undefined ? allscopes.length > 0 && allscopes.length <= 3 ? allscopes : [] : [])
 
-  const [selectedScopes, setSelectedScopes] = React.useState(allscopes.length === 1 ? [allscopes[0]] : [])
   const [manuallyConfigure, setManuallyConfigure] = React.useState(
     defaultConfigSet ? false : true
   );
@@ -155,6 +156,7 @@ const AuthenticationOauth2 = (props) => {
   if (selectedApp.authentication === undefined) {
     return null;
   }
+
 
 	const startOauth2Request = (admin_consent) => {
 		// Admin consent also means to add refresh tokens
@@ -216,7 +218,7 @@ const AuthenticationOauth2 = (props) => {
 				"31cb4c84-658e-43d5-ae84-22c9142e967a",
 				"",
 				"https://graph.microsoft.com",
-				["ChannelMessage.Edit", "ChannelMessage.Read.All", "ChannelMessage.Send", "Chat.Create", "Chat.ReadWrite", "Chat.Read", "offline_access"],
+				["ChannelMessage.Edit", "ChannelMessage.Read.All", "ChannelMessage.Send", "Chat.Create", "Chat.ReadWrite", "Chat.Read", "offline_access", "Team.ReadBasic.All"],
 				admin_consent,
 			)
 		} else if (selectedApp.name.toLowerCase().includes("todoist")) {
@@ -261,6 +263,16 @@ const AuthenticationOauth2 = (props) => {
 				admin_consent,
 				"consent",
 			)
+		} else if (selectedApp.name.toLowerCase().includes("google_chat") || selectedApp.name.toLowerCase().includes("google_hangout")) {
+			handleOauth2Request(
+				"253565968129-6pij4g6ojim4gpum0h9m9u3bc357qsq7.apps.googleusercontent.com",
+				"",
+				"https://www.googleapis.com",
+				["https://www.googleapis.com/auth/chat.messages",],
+				admin_consent,
+				"consent",
+			)
+
 		} else if (selectedApp.name.toLowerCase().includes("jira_service_desk") || selectedApp.name.toLowerCase().includes("jira") || selectedApp.name.toLowerCase().includes("jira_service_management")) {
 			handleOauth2Request(
 				"AI02egeCQh1Zskm1QAJaaR6dzjR97V2F",
@@ -285,15 +297,110 @@ const AuthenticationOauth2 = (props) => {
 
 
   const handleOauth2Request = (client_id, client_secret, oauth_url, scopes, admin_consent, prompt) => {
-    setButtonClicked(true);
-    //console.log("SCOPES: ", scopes);
+
+	  if ((authenticationType.redirect_uri === undefined || authenticationType.redirect_uri === null || authenticationType.redirect_uri.length === 0) && (authenticationType.token_uri !== undefined && authenticationType.token_uri !== null && authenticationType.token_uri.length > 0)) {
+		  console.log("No redirect URI found, and token URI found. Assuming client credentials flow and saving directly in the database")
+
+
+		  var tokenUri = authenticationType.token_uri;
+		  if (oauthUrl !== undefined && oauthUrl !== null && oauthUrl.length > 0 && selectedApp !== undefined && selectedApp !== null) {
+			  var same = false
+			  for (var i = 0; i < selectedApp.authentication.parameters.length; i++) {
+				  const param = selectedApp.authentication.parameters[i];
+				  if (param.name === "url" && (param.value === oauthUrl || param.example === oauthUrl)) {
+					  same = true
+					  break
+				  }
+			  }
+
+			  if (!same) {
+			  	tokenUri = oauthUrl
+			  }
+		  }
+
+		// Find app.configuration=true fields in the app.paramters
+		var parsedFields = [{
+			"key": "client_id",
+			"value": client_id,
+		},
+		{
+			"key": "client_secret",
+			"value": client_secret,
+		},
+		{
+			"key": "scope",
+			"value": scopes.join(","),
+		},
+		{
+			"key": "token_uri",
+			"value": tokenUri,
+		}]
+
+		if (authenticationType.grant_type !== undefined && authenticationType.grant_type !== null && authenticationType.grant_type.length > 0) {
+			if (authenticationType.grant_type === "client_credentials") {
+				parsedFields.push({
+					"key": "grant_type",
+					"value": authenticationType.grant_type,
+				})
+			} else if (authenticationType.grant_type === "password") {
+				parsedFields.push({
+					"key": "grant_type",
+					"value": authenticationType.grant_type,
+				})
+
+				parsedFields.push({
+					"key": "username",
+					"value": username,
+				})
+
+				parsedFields.push({
+					"key": "password",
+					"value": password,
+				})
+			} else {
+				toast("Unknown grant type: " + authenticationType.grant_type)
+			}
+		}
+
+		const appAuthData = {
+			"label": "OAuth2 for " + selectedApp.name,
+			"app": {
+				"id": selectedApp.id,
+				"name": selectedApp.name,
+				"version": selectedApp.version,
+				"large_image": selectedApp.large_image,
+				},
+				"fields": parsedFields,
+				"type": "oauth2-app",
+				"reference_workflow": workflowId,
+		}
+
+	    if (setNewAppAuth !== undefined) {
+			setNewAppAuth(appAuthData, true) 
+		} else {
+			console.log("setNewAppAuth is undefined")
+	    }
+
+		// Wait 1 second, then get app auth with update
+		//if (getAppAuthentication !== undefined) {
+		//	setTimeout(() => {
+        //  		getAppAuthentication(true, true, true);
+		//	}, 1000)
+		//}
+
+	    return
+	  }
+
+
+		setButtonClicked(true);
+		//console.log("SCOPES: ", scopes);
 
 		client_id = client_id.trim()
 		client_secret = client_secret.trim()
 		oauth_url = oauth_url.trim()
 
-    var resources = "";
-    if (scopes !== undefined && (scopes !== null) & (scopes.length > 0)) {
+		var resources = "";
+		if (scopes !== undefined && (scopes !== null) & (scopes.length > 0)) {
 			console.log("IN scope 1")
 			if (offlineAccess === true && !scopes.includes("offline_access")) {
 
@@ -309,29 +416,27 @@ const AuthenticationOauth2 = (props) => {
     }
 
     const authentication_url = authenticationType.token_uri;
-    //console.log("AUTH: ", authenticationType)
-    //console.log("SCOPES2: ", resources)
     const redirectUri = `${window.location.protocol}//${window.location.host}/set_authentication`;
-		const workflowId = workflow !== undefined ? workflow.id : "";
+	const workflowId = workflow !== undefined ? workflow.id : "";
     var state = `workflow_id%3D${workflowId}%26reference_action_id%3d${selectedAction.app_id}%26app_name%3d${selectedAction.app_name}%26app_id%3d${selectedAction.app_id}%26app_version%3d${selectedAction.app_version}%26authentication_url%3d${authentication_url}%26scope%3d${resources}%26client_id%3d${client_id}%26client_secret%3d${client_secret}`;
 
 
-		// This is to make sure authorization can be handled WITHOUT being logged in,
-		// kind of making it act like an api key
-		// https://gsoc2r.io/authorization -> 3rd party integration auth
-		const urlParams = new URLSearchParams(window.location.search);
-		const userAuth = urlParams.get("authorization");
-		if (userAuth !== undefined && userAuth !== null && userAuth.length > 0) {
-			console.log("Adding authorization from user side")
-			state += `%26authorization%3d${userAuth}`;
-		}
+	// This is to make sure authorization can be handled WITHOUT being logged in,
+	// kind of making it act like an api key
+	// https://gsoc2r.io/authorization -> 3rd party integration auth
+	const urlParams = new URLSearchParams(window.location.search);
+	const userAuth = urlParams.get("authorization");
+	if (userAuth !== undefined && userAuth !== null && userAuth.length > 0) {
+		console.log("Adding authorization from user side")
+		state += `%26authorization%3d${userAuth}`;
+	}
 
-		// Check for org_id
-		const orgId = urlParams.get("org_id");
-		if (orgId !== undefined && orgId !== null && orgId.length > 0) {
-			console.log("Adding org_id from user side")
-			state += `%26org_id%3d${orgId}`;
-		}
+	// Check for org_id
+	const orgId = urlParams.get("org_id");
+	if (orgId !== undefined && orgId !== null && orgId.length > 0) {
+		console.log("Adding org_id from user side")
+		state += `%26org_id%3d${orgId}`;
+	}
 
     if (oauth_url !== undefined && oauth_url !== null && oauth_url.length > 0) {
       state += `%26oauth_url%3d${oauth_url}`;
@@ -351,7 +456,7 @@ const AuthenticationOauth2 = (props) => {
 
 		// No prompt forcing
     //var url = `${authenticationType.redirect_uri}?client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&prompt=login&scope=${resources}&state=${state}&access_type=offline`;
-		var defaultPrompt = "login"
+	var defaultPrompt = "login"
    	if (prompt !== undefined && prompt !== null && prompt.length > 0) {
 			defaultPrompt = prompt
 		}
@@ -392,9 +497,9 @@ const AuthenticationOauth2 = (props) => {
           //alert('"Secure Payment" window closed!');
 					//
 
-					if (getAppAuthentication !== undefined) {
-          	getAppAuthentication(true, true, true);
-					}
+			if (getAppAuthentication !== undefined) {
+          		getAppAuthentication(true, true, true);
+			}
         } else {
 					console.log("Not closed")
 				}
@@ -411,15 +516,13 @@ const AuthenticationOauth2 = (props) => {
       //}
       //while(open === true)
     } catch (e) {
-      alert.error(
+      toast(
         "Failed authentication - probably bad credentials. Try again"
       );
       setButtonClicked(false);
     }
 
     return;
-    //do {
-    //} while (
   };
 
   authenticationOption.app.actions = [];
@@ -437,10 +540,9 @@ const AuthenticationOauth2 = (props) => {
   }
 
   const handleSubmitCheck = () => {
-    console.log("NEW AUTH: ", authenticationOption);
     if (authenticationOption.label.length === 0) {
       authenticationOption.label = `Auth for ${selectedApp.name}`;
-      //alert.info("Label can't be empty")
+      //toast("Label can't be empty")
       //return
     }
 
@@ -468,7 +570,7 @@ const AuthenticationOauth2 = (props) => {
               selectedApp.authentication.parameters[key].name
             ] = "false";
           } else {
-            alert.info(
+            toast(
               "Field " + selectedApp.authentication.parameters[key].name.replace("_basic", "", -1).replace("_", " ", -1) + " can't be empty"
                 
             );
@@ -504,7 +606,10 @@ const AuthenticationOauth2 = (props) => {
 
     console.log("FIELDS: ", newFields);
     newAuthOption.fields = newFields;
-    setNewAppAuth(newAuthOption);
+
+	if (setNewAppAuth !== undefined) {
+    	setNewAppAuth(newAuthOption);
+	}
     //appAuthentication.push(newAuthOption)
     //setAppAuthentication(appAuthentication)
     //
@@ -587,7 +692,7 @@ const AuthenticationOauth2 = (props) => {
 				)}
 			</Button>
 
-	if (authButtonOnly === true) {
+	if (authButtonOnly === true && (authenticationType.redirect_uri !== undefined && authenticationType.redirect_uri !== null && authenticationType.redirect_uri.length > 0) && (authenticationType.token_uri !== undefined && authenticationType.token_uri !== null && authenticationType.token_uri.length > 0)) {
 		return autoAuthButton
 	}
 
@@ -595,7 +700,7 @@ const AuthenticationOauth2 = (props) => {
     <div>
       <DialogTitle>
         <div style={{ color: "white" }}>
-          Authentication for {selectedApp.name}
+          Authenticate {selectedApp.name.replaceAll("_", " ")}
         </div>
       </DialogTitle>
       <DialogContent>
@@ -662,11 +767,6 @@ const AuthenticationOauth2 = (props) => {
 						style={{backgroundColor: theme.palette.inputColor, borderRadius: theme.palette.borderRadius,}} 
 						InputProps={{
 							style:{
-								color: "white",
-								marginLeft: "5px",
-								maxWidth: "95%",
-								height: 50, 
-								fontSize: "1em",
 							},
 						}}
 						fullWidth
@@ -696,10 +796,14 @@ const AuthenticationOauth2 = (props) => {
                 setOauthUrl(data.value);
               }
 
+			  const defaultValue = data.name === "url" && authenticationType.token_uri !== undefined && authenticationType.token_uri !== null && authenticationType.token_uri.length > 0 && (authenticationType.authorizationUrl === undefined || authenticationType.authorizationUrl === null || authenticationType.authorizationUrl.length === 0) ? authenticationType.token_uri : data.value === undefined || data.value === null ? "" : data.value
+			  const fieldname = data.name === "url" && authenticationType.grant_type !== undefined && authenticationType.grant_type !== null && authenticationType.grant_type.length > 0 ? "Token URL" : data.name
+
               return (
                 <div key={index} style={{ marginTop: 10 }}>
                   <LockOpenIcon style={{ marginRight: 10 }} />
-                  <b>{data.name}</b>
+
+				  <b>{fieldname}</b>
 
                   {data.schema !== undefined &&
                   data.schema !== null &&
@@ -712,6 +816,7 @@ const AuthenticationOauth2 = (props) => {
                       }}
                       defaultValue={"false"}
                       fullWidth
+					  label={fieldname}
                       onChange={(e) => {
                         console.log("Value: ", e.target.value);
                         authenticationOption.fields[data.name] = e.target.value;
@@ -751,11 +856,6 @@ const AuthenticationOauth2 = (props) => {
                       }}
                       InputProps={{
                         style: {
-                          color: "white",
-                          marginLeft: "5px",
-                          maxWidth: "95%",
-                          height: 50,
-                          fontSize: "1em",
                         },
                       }}
                       fullWidth
@@ -766,16 +866,11 @@ const AuthenticationOauth2 = (props) => {
                           : "text"
                       }
                       color="primary"
-                      defaultValue={
-                        data.value !== undefined && data.value !== null
-                          ? data.value
-                          : ""
-                      }
+                      defaultValue={defaultValue}
                       placeholder={data.example}
                       onChange={(event) => {
-                        authenticationOption.fields[data.name] =
-                          event.target.value;
-                        console.log("Setting oauth url");
+                        authenticationOption.fields[data.name] = event.target.value;
+                        console.log("Setting oauth url: ", event.target.value);
                         setOauthUrl(event.target.value);
                         //const [oauthUrl, setOauthUrl] = React.useState("")
                       }}
@@ -792,15 +887,11 @@ const AuthenticationOauth2 = (props) => {
               }}
               InputProps={{
                 style: {
-                  color: "white",
-                  marginLeft: "5px",
-                  maxWidth: "95%",
-                  fontSize: "1em",
-                  height: "50px",
                 },
               }}
               fullWidth
               color="primary"
+			  label={"Client ID"}
               placeholder={"Client ID"}
               onChange={(event) => {
                 setClientId(event.target.value);
@@ -815,28 +906,69 @@ const AuthenticationOauth2 = (props) => {
               }}
               InputProps={{
                 style: {
-                  color: "white",
-                  marginLeft: "5px",
-                  maxWidth: "95%",
-                  fontSize: "1em",
-                  height: "50px",
                 },
               }}
               fullWidth
               color="primary"
+			  label={"Client Secret"}
               placeholder={"Client Secret"}
               onChange={(event) => {
                 setClientSecret(event.target.value);
                 //authenticationOption.label = event.target.value
               }}
             />
-            {allscopes.length === 0 ? null : (
+
+			{authenticationType.grant_type !== "password" ? null : 
+				<div>
+					<TextField
+					  style={{
+						backgroundColor: theme.palette.inputColor,
+						borderRadius: theme.palette.borderRadius,
+					  }}
+					  InputProps={{
+						style: {
+						},
+					  }}
+					  fullWidth
+					  color="primary"
+					  label={"Username"}
+					  placeholder={"Username"}
+					  onChange={(event) => {
+						setUsername(event.target.value);
+						//authenticationOption.label = event.target.value
+					  }}
+					/>
+					<TextField
+					  style={{
+						backgroundColor: theme.palette.inputColor,
+						borderRadius: theme.palette.borderRadius,
+						marginBottom: 10, 
+					  }}
+					  InputProps={{
+						style: {
+						},
+					  }}
+					  fullWidth
+					  color="primary"
+					  label={"Password"}
+					  placeholder={"Password"}
+					  onChange={(event) => {
+						setPassword(event.target.value);
+						//authenticationOption.label = event.target.value
+					  }}
+					/>
+				</div>
+			}
+
+            {allscopes === undefined || allscopes === null || allscopes.length === 0 ? null : "Scopes (access rights)"}
+            {allscopes === undefined || allscopes === null || allscopes.length === 0 ? null : (
 							<div style={{width: "100%", marginTop: 10, display: "flex"}}>
 								<span>
-									Scopes
 									<Select
 										multiple
+										underline={false}
 										value={selectedScopes}
+										label="Scopes"
 										style={{
 											backgroundColor: theme.palette.inputColor,
 											color: "white",
@@ -862,17 +994,20 @@ const AuthenticationOauth2 = (props) => {
 										})}
 									</Select>
 								</span>
-								<span>
-									<Tooltip
-										color="primary"
-										title={"Automatic Refresh (default: true)"}
-										placement="top"
-									>
-										<Checkbox style={{paddingTop: 20}} color="secondary" checked={offlineAccess} onClick={() => {
-											setOfflineAccess(!offlineAccess)
-										}}/>
-									</Tooltip>
-								</span>
+
+								{((authenticationType.redirect_uri === undefined || authenticationType.redirect_uri === null || authenticationType.redirect_uri.length === 0) && (authenticationType.token_uri !== undefined && authenticationType.token_uri !== null && authenticationType.token_uri.length > 0)) ? null : 
+									<span>
+										<Tooltip
+											color="primary"
+											title={"Automatic Refresh (default: true)"}
+											placement="top"
+										>
+											<Checkbox style={{paddingTop: 20}} color="secondary" checked={offlineAccess} onClick={() => {
+												setOfflineAccess(!offlineAccess)
+											}}/>
+										</Tooltip>
+									</span>
+								}
 							</div>
             )}
           </span>
@@ -884,24 +1019,19 @@ const AuthenticationOauth2 = (props) => {
             borderRadius: theme.palette.borderRadius,
           }}
           disabled={
-            clientSecret.length === 0 || clientId.length === 0 || buttonClicked || selectedScopes.length === 0
+            clientSecret.length === 0 || clientId.length === 0 || buttonClicked || (allscopes.length !== 0 && selectedScopes.length === 0)
           }
           variant="contained"
           fullWidth
           onClick={() => {
-            handleOauth2Request(
-              clientId,
-              clientSecret,
-              oauthUrl,
-              selectedScopes
-            );
+            handleOauth2Request(clientId, clientSecret, oauthUrl, selectedScopes);
           }}
           color="primary"
         >
           {buttonClicked ? (
             <CircularProgress style={{ color: "white" }} />
           ) : (
-            "Manually Authenticate"
+            "Authenticate"
           )}
         </Button>
 

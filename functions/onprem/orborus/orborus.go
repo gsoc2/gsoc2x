@@ -1,7 +1,7 @@
 package main
 
 /*
-	Orborus exists to listen for new workflow executions whcih are deployed as workers.
+	Orborus exists to listen for new workflow executions which are deployed as workers.
 */
 
 //  Potential issues:
@@ -27,6 +27,11 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"sync"
+	"math"
+
+	//"os/signal"
+	//"syscall"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -39,13 +44,26 @@ import (
 	uuid "github.com/satori/go.uuid"
 
 	//"github.com/mackerelio/go-osstat/disk"
-	"github.com/mackerelio/go-osstat/memory"
-	"github.com/shirou/gopsutil/cpu"
+	//"github.com/mackerelio/go-osstat/memory"
+	//"github.com/shirou/gopsutil/cpu"
+
+	//k8s deps
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/util/homedir"
+	"path/filepath"
+
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // Starts jobs in bulk, so this could be increased
-var sleepTime = 3
-var maxConcurrency = 15
+var sleepTime = 2
+
+// Making it work on low-end machines even during busy times :)
+// May cause some things to run slowly 
+var maxConcurrency = 7 
 
 // Timeout if something rashes
 var workerTimeoutEnv = os.Getenv("GSOC2_ORBORUS_EXECUTION_TIMEOUT")
@@ -55,6 +73,8 @@ var workerVersion = os.Getenv("GSOC2_WORKER_VERSION")
 var newWorkerImage = os.Getenv("GSOC2_WORKER_IMAGE")
 var dockerSwarmBridgeMTU = os.Getenv("GSOC2_SWARM_BRIDGE_DEFAULT_MTU")
 var dockerSwarmBridgeInterface = os.Getenv("GSOC2_SWARM_BRIDGE_DEFAULT_INTERFACE")
+var isKubernetes = os.Getenv("IS_KUBERNETES")
+var maxCPUPercent = 95 
 
 // var baseimagename = "docker.pkg.github.com/gsoc2/gsoc2"
 // var baseimagename = "ghcr.io/gsoc2"
@@ -216,16 +236,18 @@ func deployServiceWorkers(image string) {
 			log.Printf("[ERROR] Failed to get network interfaces: %s", err)
 		}
 
-		mtu, err := strconv.Atoi(dockerSwarmBridgeMTU) // by default
-		bridgeName := dockerSwarmBridgeInterface
-
-		if bridgeName == "" {
-			bridgeName = "eth0"
+		mtu := 1500
+		if len(dockerSwarmBridgeMTU) == 0 {
+			mtu, err = strconv.Atoi(dockerSwarmBridgeMTU) // by default
+			if err != nil {
+				log.Printf("[DEBUG] Failed to convert the default MTU to int: %s. Using 1500 instead. Input: %s", err, dockerSwarmBridgeMTU)
+				mtu = 1500
+			}
 		}
 
-		if err != nil {
-			log.Printf("[ERROR] Failed to convert the default MTU to int: %s. Using 1500 instead", err)
-			mtu = 1500
+		bridgeName := dockerSwarmBridgeInterface
+		if bridgeName == "" {
+			bridgeName = "eth0"
 		}
 
 		// Check if there is at least one interface
@@ -233,11 +255,11 @@ func deployServiceWorkers(image string) {
 			// this assumes that the machine should have at least 2 network
 			// interfaces. If not, we will use the default MTU.
 			// interface 1 is the loopback interface
-			// interface 2 is eth0, The eth0 interface inside a 
+			// interface 2 is eth0, The eth0 interface inside a
 			// Docker container corresponds to the virtual Ethernet
 			// interface that connects the container to the docker0
 			log.Printf("[ERROR] Failed to get enough network interfaces")
-		} else {		
+		} else {
 			// Get the preferred interface
 			for _, iface := range interfaces {
 				if strings.Contains(iface.Name, bridgeName) {
@@ -247,7 +269,7 @@ func deployServiceWorkers(image string) {
 					break
 				}
 			}
-		}		
+		}
 
 		// Create the network options with the specified MTU
 		options := make(map[string]string)
@@ -384,6 +406,17 @@ func deployServiceWorkers(image string) {
 			cnt = 1
 		}
 
+		appReplicas := os.Getenv("GSOC2_APP_REPLICAS")
+		appReplicaCnt := 1
+		if len(appReplicas) > 0 {
+			newCnt, err := strconv.Atoi(appReplicas)
+			if err != nil {
+				log.Printf("[ERROR] %s is not a valid number for GSOC2_APP_REPLICAS", appReplicas)
+			} else {
+				appReplicaCnt = newCnt
+			}
+		}
+
 		log.Printf("[DEBUG] Found %d node(s) to replicate over. Defaulting to 1 IF we can't auto-discover them.", cnt)
 		replicatedJobs := uint64(replicas * nodeCount)
 
@@ -440,9 +473,10 @@ func deployServiceWorkers(image string) {
 					Env: []string{
 						fmt.Sprintf("GSOC2_SWARM_CONFIG=%s", os.Getenv("GSOC2_SWARM_CONFIG")),
 						fmt.Sprintf("GSOC2_SWARM_NETWORK_NAME=%s", networkName),
-						fmt.Sprintf("GSOC2_APP_REPLICAS=%d", cnt),
-						fmt.Sprintf("TZ=%s", timezone),
+						fmt.Sprintf("GSOC2_APP_REPLICAS=%d", appReplicaCnt),
 						fmt.Sprintf("GSOC2_LOGS_DISABLED=%s", os.Getenv("GSOC2_LOGS_DISABLED")),
+						fmt.Sprintf("DEBUG_MEMORY=%s", os.Getenv("DEBUG_MEMORY")),
+						fmt.Sprintf("GSOC2_APP_SDK_TIMEOUT=%s", os.Getenv("GSOC2_APP_SDK_TIMEOUT")),
 					},
 					//Hosts: []string{
 					//	innerContainerName,
@@ -522,6 +556,23 @@ func deployServiceWorkers(image string) {
 			}
 		}
 
+		// Look for GSOC2_VOLUME_BINDS
+		if len(os.Getenv("GSOC2_VOLUME_BINDS")) > 0 {
+			serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("GSOC2_VOLUME_BINDS=%s", os.Getenv("GSOC2_VOLUME_BINDS")))
+		}
+
+		overrideHttpProxy := os.Getenv("GSOC2_INTERNAL_HTTP_PROXY")
+		overrideHttpsProxy := os.Getenv("GSOC2_INTERNAL_HTTPS_PROXY")
+		if len(overrideHttpProxy) > 0 {
+			log.Printf("[DEBUG] Added internal proxy: %s", overrideHttpProxy)
+			serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("GSOC2_INTERNAL_HTTP_PROXY=%s", overrideHttpProxy))
+		}
+
+		if len(overrideHttpsProxy) > 0 {
+			log.Printf("[DEBUG] Added internal proxy: %s", overrideHttpsProxy)
+			serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("GSOC2_INTERNAL_HTTPS_PROXY=%s", overrideHttpsProxy))
+		}
+
 		serviceOptions := types.ServiceCreateOptions{}
 		_, err = dockercli.ServiceCreate(
 			ctx,
@@ -559,8 +610,72 @@ func deployServiceWorkers(image string) {
 
 // Deploys the internal worker whenever something happens
 // https://docs.docker.com/engine/api/sdk/examples/
+
+func buildEnvVars(envMap map[string]string) []corev1.EnvVar {
+	var envVars []corev1.EnvVar
+	for key, value := range envMap {
+		envVars = append(envVars, corev1.EnvVar{Name: key, Value: value})
+	}
+	return envVars
+}
+
 func deployWorker(image string, identifier string, env []string, executionRequest gsoc2.ExecutionRequest) error {
-	// Binds is the actual "-v" volume.
+
+	if isKubernetes == "true" {
+		if len(os.Getenv("REGISTRY_URL")) > 0 && os.Getenv("REGISTRY_URL") != "" {
+			env = append(env, fmt.Sprintf("REGISTRY_URL=%s", os.Getenv("REGISTRY_URL")))
+			env = append(env, fmt.Sprintf("IS_KUBERNETES=%s", os.Getenv("IS_KUBERNETES")))
+		}
+
+		image = os.Getenv("GSOC2_KUBERNETES_WORKER")
+		log.Printf("[DEBUG] using worker image:", image)
+		// image = "gsoc2-worker:v1" //hard coded image name to test locally
+
+		envMap := make(map[string]string)
+		for _, envStr := range env {
+			parts := strings.SplitN(envStr, "=", 2)
+			if len(parts) == 2 {
+				envMap[parts[0]] = parts[1]
+			}
+		}
+
+		clientset, err := getKubernetesClient()
+		if err != nil {
+			log.Printf("[ERROR] Error getting kubernetes client:", err)
+			return err
+		}
+
+		pod := &corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   identifier,
+				Labels: map[string]string{"app": "gsoc2-worker"},
+			},
+			Spec: corev1.PodSpec{
+				RestartPolicy: "Never",
+				// once images is pushed, we can remove this
+				// keep this when running locally
+				// NodeSelector: map[string]string{
+				// 	"node": "master",
+				// },
+				Containers: []corev1.Container{
+					{
+						Name:  identifier,
+						Image: image,
+						Env:   buildEnvVars(envMap),
+					},
+				},
+			},
+		}
+
+		createdPod, err := clientset.CoreV1().Pods("gsoc2").Create(context.Background(), pod, metav1.CreateOptions{})
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error creating pod: %v\n", err)
+		}
+
+		log.Printf("[INFO] Created pod %q in namespace %q\n", createdPod.Name, createdPod.Namespace)
+	} else {
+
+		// Binds is the actual "-v" volume.
 	// Max 20% CPU every second
 
 	//CPUQuota:  25000,
@@ -586,7 +701,7 @@ func deployWorker(image string, identifier string, env []string, executionReques
 
 	hostConfig.NetworkMode = container.NetworkMode(fmt.Sprintf("container:%s", containerId))
 
-	if strings.ToLower(cleanupEnv) == "true" {
+	if strings.ToLower(cleanupEnv) != "false" {
 		hostConfig.AutoRemove = true
 	}
 
@@ -690,7 +805,7 @@ func deployWorker(image string, identifier string, env []string, executionReques
 			log.Printf("[ERROR] Failed to start worker container in environment %s: %s", environment, err)
 			return err
 		} else {
-			log.Printf("[INFO] Worker Container %s was created under environment %s for execution %s: docker logs %s", cont.ID, environment, executionRequest.ExecutionId, cont.ID)
+			log.Printf("[INFO][%s] Worker Container created. Environment %s: docker logs %s", executionRequest.ExecutionId, environment, cont.ID)
 		}
 
 		//stats, err := cli.ContainerInspect(context.Background(), containerName)
@@ -715,7 +830,10 @@ func deployWorker(image string, identifier string, env []string, executionReques
 		//	}
 		//}
 	} else {
-		log.Printf("[INFO] Worker Container %s was created under environment %s: docker logs %s", cont.ID, environment, cont.ID)
+		log.Printf("[INFO][%s] New Worker created. Environment %s: docker logs %s", executionRequest.ExecutionId, environment, cont.ID)
+	}
+
+	return nil
 	}
 
 	return nil
@@ -760,7 +878,7 @@ func initializeImages() {
 	}
 
 	if baseimageregistry == "" {
-		baseimageregistry = "docker.io" // Dockerhub
+		baseimageregistry = "ghcr.io" // Dockerhub
 		baseimageregistry = "ghcr.io"   // Github
 		log.Printf("[DEBUG] Setting baseimageregistry")
 	}
@@ -860,7 +978,54 @@ func checkSwarmService(ctx context.Context) {
 	log.Printf("[DEBUG] Swarm info: %s\n\n", ret)
 }
 
-func getOrborusStats() gsoc2.OrborusStats {
+func getContainerResourceUsage(ctx context.Context, cli *dockerclient.Client, containerID string) (float64, float64, error) {
+	// Get container stats
+	stats, err := cli.ContainerStats(ctx, containerID, false)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	defer stats.Body.Close()
+	// Parse and return CPU and memory utilization
+	cpuUsage, memoryUsage, err := parseResourceUsage(stats.Body)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	return cpuUsage, memoryUsage, nil
+}
+
+func parseResourceUsage(body io.Reader) (float64, float64, error) {
+	var stats types.StatsJSON
+
+	// Decode the stream of stats as JSON
+	decoder := json.NewDecoder(body)
+	if err := decoder.Decode(&stats); err != nil {
+		return 0, 0, err
+	}
+
+	//log.Printf("[DEBUG] CPU : %d", stats.CPUStats.CPUUsage.TotalUsage)
+	//log.Printf("[DEBUG] CPU2: %d", stats.PreCPUStats.CPUUsage.TotalUsage)
+	if stats.CPUStats.CPUUsage.TotalUsage == 0 || stats.PreCPUStats.CPUUsage.TotalUsage == 0 {
+		//log.Printf("[DEBUG] BODY: %#v", stats)
+		return 0, 0, nil
+	}
+
+	// Calculate time difference between current and previous stats in nanoseconds
+	timeDelta := float64(stats.Read.Sub(stats.PreRead).Nanoseconds())
+
+	// Calculate CPU usage percentage
+	cpuDelta := float64(stats.CPUStats.CPUUsage.TotalUsage - stats.PreCPUStats.CPUUsage.TotalUsage)
+	cpuUsage := (cpuDelta / timeDelta) * 100.0
+
+	// Calculate memory usage percentage
+	memoryUsage := float64(stats.MemoryStats.Usage) / float64(stats.MemoryStats.Limit) * 100.0
+
+	return cpuUsage, memoryUsage, nil
+
+}
+
+func getOrborusStats(ctx context.Context) gsoc2.OrborusStats {
 	newStats := gsoc2.OrborusStats{
 		OrgId:        org,
 		Environment:  environment,
@@ -872,25 +1037,111 @@ func getOrborusStats() gsoc2.OrborusStats {
 		newStats.Swarm = true
 	}
 
-	if runningMode == "kubernetes" || runningMode == "k8s" {
-		newStats.Kubernetes = true
-	}
+
+	// Run this 1/10 times
+	//if rand.Intn(10) != 1 {
+	//	return newStats
+	//}
 
 	newStats.PollTime = sleepTime
 	newStats.MaxQueue = maxConcurrency
 	newStats.Queue = executionCount
 
-	// Get CPU usage and max CPU
-	/*
-		before, err := cpu.Get()
-		if err != nil {
-			log.Printf("[ERROR] Failed getting CPU stats: %s", err)
-		} else {
-			newStats.CPU = int(before.User)
-			newStats.MaxCPU = int(before.Total)
-		}
-	*/
+	if isKubernetes == "true" || runningMode == "kubernetes" || runningMode == "k8s"  {
+		newStats.Kubernetes = true
+		return newStats
+	}
 
+	// Use the docker API to get the CPU usage of the docker engine machine
+	pers, err := dockercli.Info(ctx)
+	if err != nil {
+		log.Printf("[ERROR] Failed getting docker info: %s. This is normal IF there are many containers running.", err)
+		return newStats
+	} else {
+		newStats.TotalContainers = pers.Containers
+		newStats.StoppedContainers = pers.ContainersStopped
+
+		// Calculate the amount of CPU utilization on the host
+		newStats.CPU = int(pers.NCPU)
+		newStats.MaxCPU = int(pers.NCPU)
+		newStats.Memory = int(pers.MemTotal)
+		newStats.MaxMemory = int(pers.MemTotal)
+	}
+
+
+		// Get list of all running containers
+	containers, err := dockercli.ContainerList(ctx, types.ContainerListOptions{})
+	if err != nil {
+		log.Printf("[ERROR] Failed getting container list: %s", err)
+		return newStats
+	}
+
+	// Use a WaitGroup to wait for all goroutines to finish
+	var wg sync.WaitGroup
+
+	// Channel to collect results
+	resultCh := make(chan struct {
+		containerID string
+		cpuUsage    float64
+		memoryUsage float64
+	})
+
+	// Iterate through containers and start a goroutine for each container
+	for _, container := range containers {
+		// Check if container is running
+		if container.State != "running" {
+			continue
+		}
+
+		wg.Add(1)
+		go func(container types.Container) {
+			defer wg.Done()
+
+			// Get CPU and memory usage for the container
+			cpuUsage, memoryUsage, err := getContainerResourceUsage(ctx, dockercli, container.ID)
+			if err != nil {
+				//log.Printf("[DEBUG] Error getting resource usage for container %s: %v\n", container.ID, err)
+			}
+
+			// Send the result to the channel
+			resultCh <- struct {
+				containerID string
+				cpuUsage    float64
+				memoryUsage float64
+			}{container.ID, cpuUsage, memoryUsage}
+		}(container)
+	}
+
+	// Close the result channel after all goroutines are done
+	go func() {
+		wg.Wait()
+		close(resultCh)
+	}()
+
+	// Collect results from the channel
+
+	// Iterate through containers and get CPU usage
+	totalCPU := float64(0.0)
+	memUsage := float64(0.0)
+	for result := range resultCh {
+		//log.Printf("[DEBUG] Container %s CPU utilization: %.2f%%, Memory utilization: %.2f%%\n", result.containerID, result.cpuUsage, result.memoryUsage)
+
+		// check if it's NaN or Inf
+		if !math.IsNaN(result.cpuUsage) {
+			totalCPU += float64(result.cpuUsage)
+		} 
+
+		if !math.IsNaN(result.memoryUsage) {
+			memUsage += float64(result.memoryUsage)
+		}
+	}
+
+	newStats.CPUPercent = totalCPU/float64(newStats.CPU)
+	newStats.MemoryPercent = memUsage
+
+	//log.Printf("[DEBUG] CPU: %.2f, Memory: %.2f", newStats.CPUPercent, newStats.MemoryPercent)
+
+	/*
 	cpuPercent, err := cpu.Percent(250*time.Millisecond, false)
 	if err == nil && len(cpuPercent) > 0 {
 		newStats.CPUPercent = cpuPercent[0]
@@ -905,6 +1156,7 @@ func getOrborusStats() gsoc2.OrborusStats {
 		newStats.Memory = int(memory.Used)
 		newStats.MaxMemory = int(memory.Total)
 	}
+	*/
 
 	// Get disk usage
 	/*
@@ -930,8 +1182,57 @@ func getOrborusStats() gsoc2.OrborusStats {
 	return newStats
 }
 
+func isRunningInCluster() bool {
+	_, existsHost := os.LookupEnv("KUBERNETES_SERVICE_HOST")
+	_, existsPort := os.LookupEnv("KUBERNETES_SERVICE_PORT")
+	return existsHost && existsPort
+}
+
+func getKubernetesClient() (*kubernetes.Clientset, error) {
+	if isRunningInCluster() {
+		config, err := rest.InClusterConfig()
+		if err != nil {
+			return nil, err
+		}
+		clientset, err := kubernetes.NewForConfig(config)
+		if err != nil {
+			return nil, err
+		}
+		return clientset, nil
+	} else {
+		home := homedir.HomeDir()
+		kubeconfigPath := filepath.Join(home, ".kube", "config")
+		config, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath)
+		if err != nil {
+			return nil, err
+		}
+		clientset, err := kubernetes.NewForConfig(config)
+		if err != nil {
+			return nil, err
+		}
+		return clientset, nil
+	}
+}
+
+func cleanup() {
+	log.Printf("[INFO] Cleaning up during shutdown")
+	ctx := context.Background()
+	cleanupExistingNodes(ctx)
+	zombiecheck(ctx, 600)
+	os.Exit(0)
+}
+
 // Initial loop etc
 func main() {
+	//sigCh := make(chan os.Signal, 1)
+	//signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
+	//defer cleanup()
+
+	// Block until a signal is received
+	if isRunningInCluster() {
+		log.Printf("[INFO] Running inside k8s cluster")
+	}
+
 	startupDelay := os.Getenv("GSOC2_ORBORUS_STARTUP_DELAY")
 	if len(startupDelay) > 0 {
 		log.Printf("[DEBUG] Setting startup delay to %#v", startupDelay)
@@ -946,7 +1247,7 @@ func main() {
 
 	log.Println("[INFO] Setting up execution environment")
 
-	//FIXME
+	// //FIXME
 	if baseUrl == "" {
 		baseUrl = "https://gsoc2r.io"
 		//baseUrl = "http://localhost:5001"
@@ -976,10 +1277,8 @@ func main() {
 		}
 	}
 
-	// Handle Cleanup
-	// var cleanupEnv = strings.ToLower(os.Getenv("CLEANUP"))
-	// GSOC2_CONTAINER_AUTO_CLEANUP=false
-	if strings.ToLower(os.Getenv("GSOC2_CONTAINER_AUTO_CLEANUP")) == "true" {
+	// Handle Cleanup - made it cleanup by default
+	if strings.ToLower(os.Getenv("GSOC2_CONTAINER_AUTO_CLEANUP")) != "false" {
 		cleanupEnv = "true"
 	}
 
@@ -1015,7 +1314,7 @@ func main() {
 
 	ctx := context.Background()
 	// Run by default from now
-	zombiecheck(ctx, workerTimeout)
+	//commenting for now as its stoppoing minikube
 
 	log.Printf("[INFO] Running towards %s (BASE_URL) with environment name %s", baseUrl, environment)
 
@@ -1049,6 +1348,8 @@ func main() {
 
 		//deployServiceWorkers(workerImage)
 	}
+
+	zombiecheck(ctx, workerTimeout)
 
 	client := gsoc2.GetExternalClient(baseUrl)
 	fullUrl := fmt.Sprintf("%s/api/v1/workflows/queue", baseUrl)
@@ -1091,24 +1392,41 @@ func main() {
 		req.Header.Add("X-Orborus-Runmode", "Docker Swarm")
 	}
 
+	if os.Getenv("GSOC2_MAX_CPU") != "" {
+		// parse 
+		tmpInt, err := strconv.Atoi(os.Getenv("GSOC2_MAX_CPU"))
+		if err == nil {
+			maxCPUPercent = tmpInt
+		}
+	}
+
 	log.Printf("[INFO] Waiting for executions at %s with Environment %#v", fullUrl, environment)
 	hasStarted := false
 	for {
 		if req.Method == "POST" {
 			// Should find data to send (memory etc.)
 
-			orborusStats := getOrborusStats()
+			// Create timeout of max 4 seconds just in case
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+
 			// Marshal and set body
+			orborusStats := getOrborusStats(ctx)
 			jsonData, err := json.Marshal(orborusStats)
 			if err == nil {
 				req.Body = ioutil.NopCloser(bytes.NewBuffer(jsonData))
 			} else {
-				log.Printf("[ERROR] Failed marshalling json: %s", err)
+				log.Printf("[ERROR] Failed marshalling. Maybe max 4 second timeout? %s", err)
+			}
+
+			if int(orborusStats.CPUPercent) > maxCPUPercent {
+				log.Printf("[DEBUG] CPU usage is at %f%%. This is more than the max limit the machine should be running at (%d). Waiting before continue.", orborusStats.CPUPercent, maxCPUPercent)
+				time.Sleep(time.Duration(sleepTime) * time.Second)
+				continue
 			}
 		}
 
 		newresp, err := client.Do(req)
-		//log.Printf("[DEBUG] Postrequest - queue")
 		if err != nil {
 			log.Printf("[WARNING] Failed making request to %s: %s", fullUrl, err)
 
@@ -1121,6 +1439,7 @@ func main() {
 			continue
 		}
 
+		//defer newresp.Body.Close()
 		if newresp.StatusCode == 405 {
 			log.Printf("[WARNING] Received 405 from %s. This is likely due to a misconfigured base URL. Automatically swapping to GET request (backwards compatibility)", fullUrl)
 
@@ -1145,7 +1464,7 @@ func main() {
 
 		// FIXME - add check for StatusCode
 		if newresp.StatusCode != 200 {
-			log.Printf("[ERROR] Backend configuration missing (%d): %s", newresp.StatusCode, string(body))
+			log.Printf("[ERROR] Backend connection failed, or is missing (%d): %s", newresp.StatusCode, string(body))
 		} else {
 			if !hasStarted {
 				log.Printf("[DEBUG] Starting iteration on environment %#v (default = Gsoc2). Got statuscode %d from backend on first request", environment, newresp.StatusCode)
@@ -1220,13 +1539,18 @@ func main() {
 			}
 
 			if gsoc2.ArrayContains(executionIds, execution.ExecutionId) {
-				log.Printf("[INFO] Execution already handled: %s", execution.ExecutionId)
+				log.Printf("[INFO] Execution already handled (rerun of old executions?): %s", execution.ExecutionId)
 				toBeRemoved.Data = append(toBeRemoved.Data, execution)
-				continue
+
+				// Should check when last this was ran, and if it's more than 10 minutes ago and it's not finished, we should run it again?
+				/*
+				if swarmConfig != "run" && swarmConfig != "swarm" {
+					continue
+				}
+				*/
 			}
 
 			// Now, how do I execute this one?
-			// FIXME - if error, check the status of the running one. If it's bad, send data back.
 			containerName := fmt.Sprintf("worker-%s", execution.ExecutionId)
 			env := []string{
 				fmt.Sprintf("AUTHORIZATION=%s", execution.Authorization),
@@ -1261,6 +1585,38 @@ func main() {
 
 			if len(os.Getenv("GSOC2_CLOUDRUN_URL")) > 0 {
 				env = append(env, fmt.Sprintf("GSOC2_CLOUDRUN_URL=%s", os.Getenv("GSOC2_CLOUDRUN_URL")))
+			}
+
+			if len(os.Getenv("GSOC2_SKIPSSL_VERIFY")) > 0 {
+				env = append(env, fmt.Sprintf("GSOC2_SKIPSSL_VERIFY=%s", os.Getenv("GSOC2_SKIPSSL_VERIFY")))
+			}
+
+			if len(os.Getenv("GSOC2_DEBUG_MEMORY")) > 0 {
+				env = append(env, fmt.Sprintf("GSOC2_DEBUG_MEMORY=%s", os.Getenv("GSOC2_DEBUG_MEMORY")))
+			}
+
+			// Look for volume binds
+			if len(os.Getenv("GSOC2_VOLUME_BINDS")) > 0 {
+				log.Printf("[DEBUG] Added volume binds: %s", os.Getenv("GSOC2_VOLUME_BINDS"))
+				env = append(env, fmt.Sprintf("GSOC2_VOLUME_BINDS=%s", os.Getenv("GSOC2_VOLUME_BINDS")))
+			}
+
+
+			if len(os.Getenv("GSOC2_APP_SDK_TIMEOUT")) > 0 {
+				env = append(env, fmt.Sprintf("GSOC2_APP_SDK_TIMEOUT=%s", os.Getenv("GSOC2_APP_SDK_TIMEOUT")))
+			}
+
+			// Setting up internal proxy config for Gsoc2 -> gsoc2 comms
+			overrideHttpProxy := os.Getenv("GSOC2_INTERNAL_HTTP_PROXY")
+			overrideHttpsProxy := os.Getenv("GSOC2_INTERNAL_HTTPS_PROXY")
+			if len(overrideHttpProxy) > 0 {
+				log.Printf("[DEBUG] Added internal proxy: %s", overrideHttpProxy)
+				env = append(env, fmt.Sprintf("HTTP_PROXY=%s", overrideHttpProxy))
+			}
+
+			if len(overrideHttpsProxy) > 0 {
+				log.Printf("[DEBUG] Added internal proxy: %s", overrideHttpsProxy)
+				env = append(env, fmt.Sprintf("HTTPS_PROXY=%s", overrideHttpsProxy))
 			}
 
 			err = deployWorker(workerImage, containerName, env, execution)
@@ -1320,6 +1676,7 @@ func main() {
 				continue
 			}
 
+			defer resultResp.Body.Close()
 			body, err := ioutil.ReadAll(resultResp.Body)
 			if err != nil {
 				log.Printf("[ERROR] Failed reading confirm body: %s", err)
@@ -1336,82 +1693,113 @@ func main() {
 			if len(toBeRemoved.Data) == len(executionRequests.Data) {
 				//log.Println("Should remove ALL!")
 			} else {
-				log.Printf("[INFO] NOT IMPLEMENTED: Should remove %d workflows from backend because they're executed!", len(toBeRemoved.Data))
+				//log.Printf("[INFO] NOT IMPLEMENTED: Should remove %d workflows from backend because they're executed!", len(toBeRemoved.Data))
 			}
 		}
 
 		time.Sleep(time.Duration(sleepTime) * time.Second)
 	}
+
 }
 
 // Is this ok to do with Docker? idk :)
 func getRunningWorkers(ctx context.Context, workerTimeout int) int {
 	//log.Printf("[DEBUG] Getting running workers with API version %s", dockerApiVersion)
-	containers, err := dockercli.ContainerList(ctx, types.ContainerListOptions{
-		All: true,
-	})
+	counter := 0
+	if isKubernetes  == "true" {
+		log.Printf("[INFO] getting running workers in kubernetes")
 
-	// Automatically updates the version
-	if err != nil {
-		log.Printf("[ERROR] Error getting containers: %s", err)
+		thresholdTime := time.Now().Add(time.Duration(-workerTimeout) * time.Second)
 
-		newVersionSplit := strings.Split(fmt.Sprintf("%s", err), "version is")
-		if len(newVersionSplit) > 1 {
-			//dockerApiVersion = strings.TrimSpace(newVersionSplit[1])
-			log.Printf("[DEBUG] WANT to change the API version to default to %s?", strings.TrimSpace(newVersionSplit[1]))
+		clientset, err := getKubernetesClient()
+		if err != nil {
+			log.Printf("[ERROR] Failed getting kubernetes client: %s", err)
+			return 0
 		}
 
-		return maxConcurrency
-	}
+		labelSelector := "app=gsoc2-worker"
+		pods, podErr := clientset.CoreV1().Pods("gsoc2").List(ctx, metav1.ListOptions{
+			LabelSelector: labelSelector,
+		})
+		if podErr != nil {
+			log.Printf("[ERROR] Failed getting running workers: %s", podErr)
+			return 0
+		}
 
-	currenttime := time.Now().Unix()
-	counter := 0
-	for _, container := range containers {
-		// Skip random containers. Only handle things related to Gsoc2.
-		if !strings.Contains(container.Image, baseimagename) {
-			gsoc2Found := false
-			for _, item := range container.Labels {
-				if item == "gsoc2" {
-					gsoc2Found = true
+		for _, pod := range pods.Items {
+			if pod.Status.Phase == "Running" && pod.CreationTimestamp.Time.After(thresholdTime) {
+				counter++
+			}
+		}
+	} else {
+
+		containers, err := dockercli.ContainerList(ctx, types.ContainerListOptions{
+			All: true,
+		})
+	
+		// Automatically updates the version
+		if err != nil {
+			log.Printf("[ERROR] Error getting containers: %s", err)
+	
+			newVersionSplit := strings.Split(fmt.Sprintf("%s", err), "version is")
+			if len(newVersionSplit) > 1 {
+				//dockerApiVersion = strings.TrimSpace(newVersionSplit[1])
+				log.Printf("[DEBUG] WANT to change the API version to default to %s?", strings.TrimSpace(newVersionSplit[1]))
+			}
+	
+			return maxConcurrency
+		}
+	
+		currenttime := time.Now().Unix()
+
+		for _, container := range containers {
+			// Skip random containers. Only handle things related to Gsoc2.
+			if !strings.Contains(container.Image, baseimagename) {
+				gsoc2Found := false
+				for _, item := range container.Labels {
+					if item == "gsoc2" {
+						gsoc2Found = true
+						break
+					}
+				}
+	
+				// Check image name
+				if !gsoc2Found {
+					continue
+				}
+				//} else {
+				//	log.Printf("NAME: %s", container.Image)
+			}
+	
+			for _, name := range container.Names {
+				// FIXME - add name_version_uid_uid regex check as well
+				if !strings.HasPrefix(name, "/worker") {
+					continue
+				}
+	
+				//log.Printf("Time: %d - %d", currenttime-container.Created, int64(workerTimeout))
+				if container.State == "running" && currenttime-container.Created < int64(workerTimeout) {
+					counter += 1
 					break
 				}
 			}
-
-			// Check image name
-			if !gsoc2Found {
-				continue
-			}
-			//} else {
-			//	log.Printf("NAME: %s", container.Image)
-		}
-
-		for _, name := range container.Names {
-			// FIXME - add name_version_uid_uid regex check as well
-			if !strings.HasPrefix(name, "/worker") {
-				continue
-			}
-
-			//log.Printf("Time: %d - %d", currenttime-container.Created, int64(workerTimeout))
-			if container.State == "running" && currenttime-container.Created < int64(workerTimeout) {
-				counter += 1
-				break
-			}
 		}
 	}
-
 	return counter
 }
 
 // FIXME - add this to remove exited workers
 // Should it check what happened to the execution? idk
 func zombiecheck(ctx context.Context, workerTimeout int) error {
+	isK8s := isKubernetes == "true"
+
 	executionIds = []string{}
-	if swarmConfig == "run" || swarmConfig == "swarm" {
+	if swarmConfig == "run" || swarmConfig == "swarm" || isK8s {
 		//log.Printf("[DEBUG] Skipping Zombie check due to new execution model (swarm)")
 		return nil
 	}
 
-	log.Println("[INFO] Looking for old containers (zombies)")
+	log.Println("[INFO] Looking for old containers to remove")
 	containers, err := dockercli.ContainerList(ctx, types.ContainerListOptions{
 		All: true,
 	})
@@ -1428,10 +1816,11 @@ func zombiecheck(ctx context.Context, workerTimeout int) error {
 	stopContainers := []string{}
 	removeContainers := []string{}
 	log.Printf("[INFO] Baseimage: %s, Workertimeout: %d", baseimagename, int64(workerTimeout))
-	baseString := `/bin/sh -c 'python app.py --log-level DEBUG'`
+	//baseString := `/bin/sh -c 'python app.py --log-level DEBUG'`
+	baseString := `python app.py`
 	for _, container := range containers {
 		// Skip random containers. Only handle things related to Gsoc2.
-		if !strings.Contains(container.Image, baseimagename) && container.Command != baseString && container.Command != "./worker" {
+		if !strings.Contains(container.Image, baseimagename) && !strings.Contains(container.Command, baseString) && !strings.Contains(container.Command, "walkoff") && container.Command != "./worker" {
 			gsoc2Found := false
 			for _, item := range container.Labels {
 				if item == "gsoc2" {
@@ -1442,7 +1831,7 @@ func zombiecheck(ctx context.Context, workerTimeout int) error {
 
 			// Check image name
 			if !gsoc2Found {
-				//log.Printf("[WARNING] Zombie container skip: %#v, %s", container.Labels, container.Image)
+				log.Printf("[WARNING] Zombie container skip: %#v, %s", container.Labels, container.Image)
 				continue
 			}
 			//} else {
@@ -1477,7 +1866,7 @@ func zombiecheck(ctx context.Context, workerTimeout int) error {
 	}
 
 	// FIXME - add killing of apps with same execution ID too
-	log.Printf("[INFO] Should STOP %d containers.", len(stopContainers))
+	log.Printf("[INFO] Should STOP and remove %d containers.", len(stopContainers))
 	var options container.StopOptions
 	for _, containername := range stopContainers {
 		log.Printf("[INFO] Stopping and removing container %s", containerNames[containername])
@@ -1517,7 +1906,6 @@ func sendWorkerRequest(workflowExecution gsoc2.ExecutionRequest) error {
 		baseUrlSplit := strings.Split(baseUrl, ":")
 		if len(baseUrlSplit) >= 3 {
 			parsedBaseurl = strings.Join(baseUrlSplit[0:2], ":")
-			//parsedRequest.BaseUrl = fmt.Sprintf("%s:33333", parsedBaseurl)
 		}
 	}
 
@@ -1527,16 +1915,18 @@ func sendWorkerRequest(workflowExecution gsoc2.ExecutionRequest) error {
 		return err
 	}
 
-	//log.Printf("[DEBUG] Data: %s", string(data))
-
 	streamUrl := fmt.Sprintf("http://gsoc2-workers:33333/api/v1/execute")
 	if containerId == "" || containerId == "gsoc2-orborus" {
 		streamUrl = fmt.Sprintf("%s:33333/api/v1/execute", parsedBaseurl)
 	}
 
-	// var workerServerUrl = os.Getenv("GSOC2_WORKER_SERVER_URL")
-	if len(workerServerUrl) > 0 {
+	if len(workerServerUrl) > 0  {
 		streamUrl = fmt.Sprintf("%s:33333/api/v1/execute", workerServerUrl)
+	}
+
+	if strings.Contains(streamUrl, "gsoc2r.io") || strings.Contains(streamUrl, "localhost") || strings.Contains(streamUrl, "gsoc2-backend") {
+		log.Printf("[INFO] Using default worker server url as previous is invalid: %s", streamUrl)
+		streamUrl = fmt.Sprintf("http://gsoc2-workers:33333/api/v1/execute")
 	}
 
 	client := &http.Client{}
@@ -1582,6 +1972,7 @@ func sendWorkerRequest(workflowExecution gsoc2.ExecutionRequest) error {
 		return err
 	}
 
+	defer newresp.Body.Close()
 	body, err := ioutil.ReadAll(newresp.Body)
 	if err != nil {
 		log.Printf("[ERROR] Failed reading body in worker request body to worker on %s: %s", streamUrl, err)
@@ -1601,6 +1992,6 @@ func sendWorkerRequest(workflowExecution gsoc2.ExecutionRequest) error {
 
 	_ = body
 
-	log.Printf("[DEBUG] Ran worker from request with execution ID: %s. Worker URL: %s. DEBUGGING: docker service logs gsoc2-workers 2&>1 | grep %s", workflowExecution.ExecutionId, streamUrl, workflowExecution.ExecutionId)
+	log.Printf("[DEBUG] Ran worker from request with execution ID: %s. Worker URL: %s. DEBUGGING:\ndocker service logs gsoc2-workers 2>&1 -f | grep %s", workflowExecution.ExecutionId, streamUrl, workflowExecution.ExecutionId)
 	return nil
 }

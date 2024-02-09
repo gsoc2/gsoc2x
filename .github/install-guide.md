@@ -1,14 +1,21 @@
-# Installation guide
-Installation of Gsoc2 is currently only available in docker. Looking for how to update Gsoc2? Check the [updating guide](https://gsoc2r.io/docs/configuration#updating_gsoc2)
+<h1 align="center">
 
-This document outlines a an introduction environment which is not scalable. [Read here](https://gsoc2r.io/docs/configuration#production_readiness) for information on production readiness. This also includes system requirements and configurations for Swarm or Kubernetes. 
+[![Gsoc2 Logo](https://github.com/Gsoc2/Gsoc2/blob/main/frontend/public/images/Gsoc2_logo_new.png)](https://gsoc2r.io)
+
+Gsoc2 Installation
+
+</h1>
+
+Installation of Gsoc2 is currently available for docker and kubernetes. Looking for how to update Gsoc2? Check the [updating guide](https://gsoc2r.io/docs/configuration#updating_gsoc2)
+
+This document outlines an introduction environment which is not scalable. [Read here](https://gsoc2r.io/docs/configuration#production_readiness) for information on production readiness. This also includes system requirements and configurations for Swarm or Kubernetes. 
 
 # Docker - *nix
 The Docker setup is done with docker-compose 
 
 **PS: if you're setting up Gsoc2 on Windows, go to the next step (Windows Docker setup)**
 
-1. Make sure you have [Docker](https://docs.docker.com/get-docker/) and [docker-compose](https://docs.docker.com/compose/install/) installed.
+1. Make sure you have [Docker](https://docs.docker.com/get-docker/) and [docker-compose](https://docs.docker.com/compose/install/) installed, and that you have a minimum of **2Gb of RAM** available.
 2. Download Gsoc2
 ```bash
 git clone https://github.com/Gsoc2/Gsoc2
@@ -55,8 +62,10 @@ OUTER_HOSTNAME=YOUR.IP.HERE
 docker-compose up -d
 ```
 
-### Configurations (proxies, default users etc.)
+### Configurations (high availability, scale, proxies, default users etc.)
 https://gsoc2r.io/docs/configuration
+
+![architecture](https://github.com/gsoc2/Gsoc2/raw/main/frontend/src/assets/img/gsoc2_architecture.png)
 
 ### After installation 
 1. After installation, go to http://localhost:3001 (or your servername - https is on port 3443)
@@ -79,14 +88,14 @@ Local development is pretty straight forward with **ReactJS** and **Golang**. Th
 
 **PS: You have to stop the Backend Docker container to get this one working**
 
-**PPS: Use the "Launch" branch when developing to get it set up easier**
+**PPS: Use the "main" branch when developing to get it set up easier**
 
 ## Frontend - ReactJS /w cytoscape
 http://localhost:3000 - Requires [npm](https://nodejs.org/en/download/)/[yarn](https://yarnpkg.com/lang/en/docs/install/#debian-stable)/your preferred manager. Runs independently from backend.
 ```bash
 cd frontend
-npm i
-npm start
+yarn install
+yarn start
 ```
 
 ## Backend - Golang
@@ -107,13 +116,18 @@ Large portions of the backend is written in another repository - [gsoc2-shared](
 2. Open the Gsoc2 backend's go.mod file (./gsoc2/backend/go.mod)  (**NOT** in gsoc2-shared)
 3. Change the following line to point to your directory AFTER the =>
 ```
-//replace github.com/gsoc2/gsoc2-shared => ../../../../git/gsoc2-shared
+//replace github.com/gsoc2/gsoc2-shared => ../../gsoc2-shared
 ```
 4. Make the changes you want, then restart the backend server!
 5. With your changes made, make a pull request :fire:
 
 ## Database - Opensearch 
-Make sure this is running through the docker-compose, and that the backend points to it with GSOC2_OPENSEARCH_URL defined
+Make sure this is running through the docker-compose, and that the backend points to it with GSOC2_OPENSEARCH_URL defined.
+
+So essentially, what that means is:
+1. Make sure you have docker-compose installed
+2. Make sure you have the docker-compose.yml file from this repository
+3. Run `docker-compose up opensearch -d`
 
 ## Orborus
 Execution of Workflows:

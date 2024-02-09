@@ -42,6 +42,8 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
+      - GSOC2_APP_SDK_TIMEOUT=300
+      - GSOC2_ORBORUS_EXECUTION_CONCURRENCY=7 # The amount of concurrent executions Orborus can handle. 
       #- DOCKER_HOST=tcp://docker-socket-proxy:2375
       - ENVIRONMENT_NAME=${ENVIRONMENT_NAME}
       - BASE_URL=http://${OUTER_HOSTNAME}:5001
@@ -53,16 +55,18 @@ services:
       - HTTPS_PROXY=${HTTPS_PROXY}
       - GSOC2_PASS_WORKER_PROXY=${GSOC2_PASS_WORKER_PROXY}
       - GSOC2_PASS_APP_PROXY=${GSOC2_PASS_APP_PROXY}
+      - GSOC2_STATS_DISABLED=true
     restart: unless-stopped
     security_opt:
       - seccomp:unconfined
   opensearch:
-    image: opensearchproject/opensearch:2.5.0
+    image: opensearchproject/opensearch:2.11.0
     hostname: gsoc2-opensearch
     container_name: gsoc2-opensearch
     environment:
-      - bootstrap.memory_lock=true
       - "OPENSEARCH_JAVA_OPTS=-Xms2048m -Xmx2048m" # minimum and maximum Java heap size, recommend setting both to 50% of system RAM
+      - bootstrap.memory_lock=true
+      - DISABLE_PERFORMANCE_ANALYZER_AGENT_CLI=true
       - cluster.initial_master_nodes=gsoc2-opensearch
       - cluster.routing.allocation.disk.threshold_enabled=false
       - cluster.name=gsoc2-cluster
@@ -83,9 +87,21 @@ services:
     networks:
       - gsoc2
     restart: unless-stopped
+
+  #memcached:
+  #  image: memcached:latest
+  #  container_name: gsoc2-cache
+  #  hostname: gsoc2-cache
+  #  mem_limit: 1024m
+  #  environment:
+  #    - MEMCACHED_MEMORY=1024
+  #    - MEMCACHED_MAX_CONNECTIONS=2500
+  #  ports:
+  #    - 11211:11211
+  
   #docker-socket-proxy:
   #  image: tecnativa/docker-socket-proxy
-  #  container_name: gsoc2-frontend
+  #  container_name: docker-socket-proxy 
   #  hostname: docker-socket-proxy
   #  privileged: true
   #  environment:
@@ -110,6 +126,7 @@ services:
   #    - /var/run/docker.sock:/var/run/docker.sock
   #  networks:
   #    - gsoc2
+  #
 networks:
   gsoc2:
     driver: bridge
