@@ -5,7 +5,7 @@ go 1.19
 //replace github.com/gsoc2/gsoc2-shared => ../../../../gsoc2-shared
 
 require (
-	github.com/docker/docker v23.0.3+incompatible
+	github.com/docker/docker v23.0.8+incompatible
 	github.com/gsoc2/gsoc2-shared v1.0.0
 	github.com/satori/go.uuid v1.2.0
 	k8s.io/api v0.28.1
