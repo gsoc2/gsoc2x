@@ -25,7 +25,7 @@ COPY ./*.json /usr/src/app/
 RUN yarn build
 
 # Production environment
-FROM nginx:1.21.5
+FROM nginx:1.25.2
 
 RUN mkdir -p /usr/share/nginx/html/build
 RUN mkdir -p /usr/share/nginx/html/css
